@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
+    <RootNamespace>InvoiceXml.Zugferd.XRechnung</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <!-- These rules suggest APIs that exist on .NET 8 only; the code also targets netstandard2.0. -->
+    <NoWarn>$(NoWarn);CA1510;CA1835;CA1865;CA2263</NoWarn>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata -->
+  <PropertyGroup>
+    <PackageId>InvoiceXml.Zugferd.XRechnung</PackageId>
+    <Version>1.0.0</Version>
+    <Title>ZUGFeRD and XRechnung for .NET (InvoiceXML API client)</Title>
+    <Authors>InvoiceXML</Authors>
+    <Company>InvoiceXML</Company>
+    <Copyright>Copyright (c) 2026 InvoiceXML</Copyright>
+    <Description>Create, validate, embed, render and read ZUGFeRD and XRechnung e-invoices from C# and .NET. A thin, typed client for the InvoiceXML REST API: EN 16931 invoice model in, ZUGFeRD PDF/A-3 or XRechnung XML out, validated against the official rule sets before delivery. Rule sets are updated on their legal effective dates, with no package update needed.</Description>
+    <PackageTags>zugferd;xrechnung;e-rechnung;erechnung;einvoicing;e-invoice;en16931;kosit;cii;pdf-a-3;invoice;germany;b2b;b2g</PackageTags>
+    <PackageProjectUrl>https://invoicexml.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/InvoiceXML/invoicexml-dotnet-zugferd-xrechnung</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="InvoiceXml.Zugferd.XRechnung.Tests" />
+  </ItemGroup>
+
+</Project>
