@@ -48,7 +48,7 @@ Totals, VAT breakdowns, the issue date and default payment terms are filled in b
 
 ### Create an XRechnung
 
-XRechnung adds German requirements on top of EN 16931: the Leitweg-ID in `BuyerReference`, a seller contact, and electronic addresses for both parties.
+XRechnung adds German requirements on top of EN 16931: the Leitweg-ID in `BuyerReference`, a seller contact, street addresses, and electronic addresses for both parties.
 
 ```csharp
 var invoice = new InvoiceDocument
@@ -57,6 +57,7 @@ var invoice = new InvoiceDocument
     Currency = CurrencyCode.EUR,
     DueDate = new DateTime(2026, 8, 27),
     BuyerReference = "04011000-12345-03", // Leitweg-ID
+    InvoicingPeriod = new Period { StartDate = new DateTime(2026, 7, 1), EndDate = new DateTime(2026, 7, 31) },
     Seller = new SellerParty
     {
         Name = "Elbufer Systeme GmbH",
@@ -68,7 +69,7 @@ var invoice = new InvoiceDocument
     Buyer = new BuyerParty
     {
         Name = "Landeshauptstadt Dresden",
-        PostalAddress = new PostalAddress { City = "Dresden", PostCode = "01067", Country = CountryCode.DE },
+        PostalAddress = new PostalAddress { Line1 = "Dr.-Kuelz-Ring 19", City = "Dresden", PostCode = "01067", Country = CountryCode.DE },
         ElectronicAddress = new SchemeIdentifier("04011000-12345-03", "0204"),
     },
     PaymentDetails = new PaymentDetails
