@@ -25,7 +25,7 @@ public class FileEndpointTests
               "line": null,
               "message": "The total amount with VAT does not match.",
               "fields": ["totals.grandTotalAmount"],
-              "raw": "[BR-CO-15] Invoice total amount with VAT = ..."
+              "raw": "Original validator output."
             }
           ],
           "warnings": [],

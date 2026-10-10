@@ -115,7 +115,7 @@ public class CreateTests
                   "line": null,
                   "message": "The buyer reference (Leitweg-ID) is missing.",
                   "fields": ["buyerReference"],
-                  "raw": "[BR-DE-15] Das Element Leitweg-ID muss uebermittelt werden."
+                  "raw": "Original validator output."
                 }
               ],
               "warnings": []
