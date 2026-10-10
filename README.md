@@ -221,4 +221,4 @@ Questions, or a field you need for your integration? [Contact us](https://invoic
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/InvoiceXML/invoicexml-dotnet-zugferd-xrechnung/blob/main/LICENSE).
