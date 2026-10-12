@@ -2,7 +2,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/InvoiceXml.Zugferd.XRechnung.svg)](https://www.nuget.org/packages/InvoiceXml.Zugferd.XRechnung)
 
-Create, validate, embed, render and read German e-invoices from C#. `InvoiceXml.Zugferd.XRechnung` is a thin, typed client for the [InvoiceXML API](https://invoicexml.com): you pass an EN 16931 invoice object and get back a ZUGFeRD PDF/A-3 or an XRechnung XML that has already passed the official rules.
+Create, validate, embed, render and read German e-invoices from C#. `InvoiceXml.Zugferd.XRechnung` is a thin, typed client for the [InvoiceXML API](https://www.invoicexml.com): you pass an EN 16931 invoice object and get back a ZUGFeRD PDF/A-3 or an XRechnung XML that has already passed the official rules.
 
 - **ZUGFeRD 2.x**: hybrid PDF/A-3 with the invoice XML embedded, EN 16931 profile by default, every official profile selectable.
 - **XRechnung**: UBL or CII syntax, checked against EN 16931 and the KoSIT rules for German public sector buyers.
@@ -34,15 +34,15 @@ var pdf = await client.CreateZugferdAsync(new InvoiceDocument
 await pdf.SaveAsync("invoice.pdf");
 ```
 
-Totals, VAT breakdowns, the issue date and default payment terms are filled in by the API when you leave them empty. Get an API key with the **30-day free trial: 100 credits, no credit card required** at [invoicexml.com/signup](https://invoicexml.com/signup).
+Totals, VAT breakdowns, the issue date and default payment terms are filled in by the API when you leave them empty. Get an API key with the **30-day free trial: 100 credits, no credit card required** at [www.invoicexml.com/signup](https://www.invoicexml.com/signup).
 
 ## Why InvoiceXML
 
 - **Rule sets updated on their legal effective dates.** New EN 16931, KoSIT and FeRD releases switch server-side on the date they become binding. Your integration and this package stay the same: no package update, no redeploy.
 - **Validated before delivery.** Every invoice is checked against the official rules before it is returned. Data that cannot yield a compliant invoice is refused with the violated rules and the fields to correct.
-- **Zero data retention.** Documents are processed in memory and never stored. See [security](https://invoicexml.com/trust).
+- **Zero data retention.** Documents are processed in memory and never stored. See [security](https://www.invoicexml.com/trust).
 - **Processing in Frankfurt.** EU-only processing in Frankfurt am Main, Germany, GDPR compliant by design.
-- **Integration assistance.** Our engineers help you map your data and get to production. [Contact us](https://invoicexml.com/contact).
+- **Integration assistance.** Our engineers help you map your data and get to production. [Contact us](https://www.invoicexml.com/contact).
 
 ## Usage
 
@@ -198,26 +198,26 @@ If the API still answers 429, the client throws `InvoiceXmlRateLimitException` w
 
 ### Errors
 
-Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusCode`, the API's numeric `ErrorCode` (see `InvoiceXmlErrorCode`), `Title`, `Detail` and a `TraceId` to quote when contacting support. The full list is in the [error handling docs](https://invoicexml.com/docs/error-handling).
+Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusCode`, the API's numeric `ErrorCode` (see `InvoiceXmlErrorCode`), `Title`, `Detail` and a `TraceId` to quote when contacting support. The full list is in the [error handling docs](https://www.invoicexml.com/docs/error-handling).
 
 ## Endpoints
 
 | Method | Endpoint | Docs |
 |---|---|---|
-| `CreateZugferdAsync` | `POST /v1/create/zugferd` | [reference](https://invoicexml.com/docs/api/create/zugferd) |
-| `CreateXRechnungAsync` | `POST /v1/create/xrechnung` | [reference](https://invoicexml.com/docs/api/create/xrechnung) |
-| `ValidateZugferdAsync` | `POST /v1/validate/zugferd` | [reference](https://invoicexml.com/docs/api/validate/zugferd) |
-| `ValidateXRechnungAsync` | `POST /v1/validate/xrechnung` | [reference](https://invoicexml.com/docs/api/validate/xrechnung) |
-| `EmbedZugferdAsync` | `POST /v1/embed/zugferd` | [reference](https://invoicexml.com/docs/api/embed/zugferd) |
-| `RenderXRechnungToPdfAsync` | `POST /v1/render/xrechnung/to/pdf` | [reference](https://invoicexml.com/docs/api/render/xrechnung/to/pdf) |
-| `ExtractJsonAsync` | `POST /v1/extract/json` | [reference](https://invoicexml.com/docs/api/extract/json) |
-| `ExtractAttachmentsAsync` | `POST /v1/extract/attachments` | [reference](https://invoicexml.com/docs/api/extract/attachments) |
+| `CreateZugferdAsync` | `POST /v1/create/zugferd` | [reference](https://www.invoicexml.com/docs/api/create/zugferd) |
+| `CreateXRechnungAsync` | `POST /v1/create/xrechnung` | [reference](https://www.invoicexml.com/docs/api/create/xrechnung) |
+| `ValidateZugferdAsync` | `POST /v1/validate/zugferd` | [reference](https://www.invoicexml.com/docs/api/validate/zugferd) |
+| `ValidateXRechnungAsync` | `POST /v1/validate/xrechnung` | [reference](https://www.invoicexml.com/docs/api/validate/xrechnung) |
+| `EmbedZugferdAsync` | `POST /v1/embed/zugferd` | [reference](https://www.invoicexml.com/docs/api/embed/zugferd) |
+| `RenderXRechnungToPdfAsync` | `POST /v1/render/xrechnung/to/pdf` | [reference](https://www.invoicexml.com/docs/api/render/xrechnung/to/pdf) |
+| `ExtractJsonAsync` | `POST /v1/extract/json` | [reference](https://www.invoicexml.com/docs/api/extract/json) |
+| `ExtractAttachmentsAsync` | `POST /v1/extract/attachments` | [reference](https://www.invoicexml.com/docs/api/extract/attachments) |
 
 The complete OpenAPI description is at [api.invoicexml.com/v1/openapi](https://api.invoicexml.com/v1/openapi), with an interactive explorer at [api.invoicexml.com/v1/scalar](https://api.invoicexml.com/v1/scalar/).
 
 ## Support
 
-Questions, or a field you need for your integration? [Contact us](https://invoicexml.com/contact) and we will help you get it working.
+Questions, or a field you need for your integration? [Contact us](https://www.invoicexml.com/contact) and we will help you get it working.
 
 ## License
 
