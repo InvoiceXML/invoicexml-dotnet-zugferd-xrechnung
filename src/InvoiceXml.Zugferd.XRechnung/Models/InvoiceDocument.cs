@@ -52,6 +52,9 @@ public sealed class InvoiceDocument
     /// <summary>Purchase order number issued by the buyer.</summary>
     public string? PurchaseOrderReference { get; set; }
 
+    /// <summary>Delivery note number of the shipment this invoice covers.</summary>
+    public string? DespatchAdviceReference { get; set; }
+
     /// <summary>Free-text notes. A plain string converts to a note implicitly.</summary>
     public IList<InvoiceNote> Notes { get; set; } = new List<InvoiceNote>();
 
