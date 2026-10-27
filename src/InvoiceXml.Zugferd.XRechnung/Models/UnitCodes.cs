@@ -6,8 +6,18 @@ namespace InvoiceXml.Zugferd.XRechnung;
 /// </summary>
 public static class UnitCodes
 {
-    /// <summary>One, piece (C62).</summary>
-    public const string Piece = "C62";
+    /// <summary>
+    /// Piece (H87): a countable item. The code German accounting systems and the
+    /// official ZUGFeRD sample invoices use for "Stück", and the unit the API writes
+    /// when a line names none.
+    /// </summary>
+    public const string Piece = "H87";
+
+    /// <summary>
+    /// One (C62): the older piece-style code, still valid under EN 16931. Use it
+    /// only when a receiver asks for C62 specifically.
+    /// </summary>
+    public const string One = "C62";
 
     /// <summary>Hour (HUR).</summary>
     public const string Hour = "HUR";
