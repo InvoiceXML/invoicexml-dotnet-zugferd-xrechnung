@@ -74,7 +74,8 @@ public class InvoiceXmlApiException : Exception
 
 /// <summary>
 /// Thrown when the API still answers HTTP 429 (Too Many Requests) after the configured retries,
-/// or asks for a longer wait than <see cref="InvoiceXmlClientOptions.MaxRetryDelay"/>.
+/// or asks for a longer wait than <see cref="InvoiceXmlClientOptions.MaxRetryDelay"/>. A transform
+/// call throws on its first 429, since it is not retried. A 429 is not billed.
 /// </summary>
 #pragma warning disable CA1032 // See InvoiceXmlApiException.
 public sealed class InvoiceXmlRateLimitException : InvoiceXmlApiException

@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 namespace InvoiceXml.Zugferd.XRechnung;
 
 /// <summary>
-/// Creates, validates, embeds, renders, emails and reads ZUGFeRD and XRechnung e-invoices through
-/// the InvoiceXML API. Implemented by <see cref="ZugferdXRechnungClient"/>; use the interface to
-/// inject and fake the client in your own tests.
+/// Creates, validates, embeds, renders, converts, emails and reads ZUGFeRD and XRechnung
+/// e-invoices through the InvoiceXML API. Implemented by <see cref="ZugferdXRechnungClient"/>; use
+/// the interface to inject and fake the client in your own tests.
 /// </summary>
 public interface IZugferdXRechnungClient
 {
@@ -143,7 +143,7 @@ public interface IZugferdXRechnungClient
     /// Renders an XRechnung XML as a human-readable PDF (<c>POST /v1/render/xrechnung/to/pdf</c>).
     /// </summary>
     /// <param name="xml">The XRechnung XML, UBL or CII.</param>
-    /// <param name="options">Language and logo, or null for the defaults.</param>
+    /// <param name="options">Language, logo and payment QR code, or null for the defaults.</param>
     /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
     /// <param name="cancellationToken">Cancels the request.</param>
     /// <returns>The rendered PDF.</returns>
@@ -151,6 +151,240 @@ public interface IZugferdXRechnungClient
 
     /// <inheritdoc cref="RenderXRechnungToPdfAsync(byte[], RenderOptions?, string?, CancellationToken)"/>
     Task<InvoiceFile> RenderXRechnungToPdfAsync(Stream xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Renders a CII XML, such as the XML of a ZUGFeRD invoice, as a human-readable PDF
+    /// (<c>POST /v1/render/cii/to/pdf</c>).
+    /// </summary>
+    /// <param name="xml">The CII invoice XML.</param>
+    /// <param name="options">Language, logo and payment QR code, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The rendered PDF.</returns>
+    Task<InvoiceFile> RenderCiiToPdfAsync(byte[] xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="RenderCiiToPdfAsync(byte[], RenderOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> RenderCiiToPdfAsync(Stream xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts a ZUGFeRD PDF to a UBL XML from the XML embedded in it (<c>POST /v1/convert/zugferd/to/ubl</c>).
+    /// </summary>
+    /// <param name="pdf">The ZUGFeRD PDF.</param>
+    /// <param name="options">Language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.pdf</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The UBL XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The PDF has no embedded XML (<see cref="InvoiceXmlErrorCode.NoEmbeddedXml"/>), the result
+    /// would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertZugferdToUblAsync(byte[] pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertZugferdToUblAsync(byte[], ConvertOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertZugferdToUblAsync(Stream pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts a ZUGFeRD PDF to a CII XML from the XML embedded in it (<c>POST /v1/convert/zugferd/to/cii</c>).
+    /// </summary>
+    /// <param name="pdf">The ZUGFeRD PDF.</param>
+    /// <param name="options">Language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.pdf</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The CII XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The PDF has no embedded XML (<see cref="InvoiceXmlErrorCode.NoEmbeddedXml"/>), the result
+    /// would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertZugferdToCiiAsync(byte[] pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertZugferdToCiiAsync(byte[], ConvertOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertZugferdToCiiAsync(Stream pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts an XRechnung XML, UBL or CII, to a plain EN 16931 UBL XML
+    /// (<c>POST /v1/convert/xrechnung/to/ubl</c>).
+    /// </summary>
+    /// <param name="xml">The XRechnung XML, UBL or CII.</param>
+    /// <param name="options">Language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The UBL XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertXRechnungToUblAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertXRechnungToUblAsync(byte[], ConvertOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertXRechnungToUblAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts an XRechnung XML, UBL or CII, to a plain EN 16931 CII XML
+    /// (<c>POST /v1/convert/xrechnung/to/cii</c>).
+    /// </summary>
+    /// <param name="xml">The XRechnung XML, UBL or CII.</param>
+    /// <param name="options">Language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The CII XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertXRechnungToCiiAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertXRechnungToCiiAsync(byte[], ConvertOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertXRechnungToCiiAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts a UBL XML to an XRechnung in UBL syntax. The invoice must meet the German
+    /// XRechnung rules (<c>POST /v1/convert/ubl/to/xrechnung</c>).
+    /// </summary>
+    /// <param name="xml">The UBL invoice XML.</param>
+    /// <param name="options">Language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The XRechnung XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertUblToXRechnungAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertUblToXRechnungAsync(byte[], ConvertOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertUblToXRechnungAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts a CII XML to an XRechnung in UBL syntax. The invoice must meet the German
+    /// XRechnung rules (<c>POST /v1/convert/cii/to/xrechnung</c>).
+    /// </summary>
+    /// <param name="xml">The CII invoice XML.</param>
+    /// <param name="options">Language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The XRechnung XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertCiiToXRechnungAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertCiiToXRechnungAsync(byte[], ConvertOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertCiiToXRechnungAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts a CII XML to a ZUGFeRD PDF/A-3, with the PDF rendered from the invoice data
+    /// (<c>POST /v1/convert/cii/to/zugferd</c>).
+    /// </summary>
+    /// <param name="xml">The CII invoice XML.</param>
+    /// <param name="options">Language of the PDF and of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The ZUGFeRD PDF.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertCiiToZugferdAsync(byte[] xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertCiiToZugferdAsync(byte[], ConvertToPdfOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertCiiToZugferdAsync(Stream xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts a UBL XML to a ZUGFeRD PDF/A-3, with the PDF rendered from the invoice data
+    /// (<c>POST /v1/convert/ubl/to/zugferd</c>).
+    /// </summary>
+    /// <param name="xml">The UBL invoice XML.</param>
+    /// <param name="options">Language of the PDF and of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The ZUGFeRD PDF.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertUblToZugferdAsync(byte[] xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertUblToZugferdAsync(byte[], ConvertToPdfOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertUblToZugferdAsync(Stream xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Converts an XRechnung XML, UBL or CII, to a ZUGFeRD PDF/A-3, with the PDF rendered from the
+    /// invoice data (<c>POST /v1/convert/xrechnung/to/zugferd</c>).
+    /// </summary>
+    /// <param name="xml">The XRechnung XML, UBL or CII.</param>
+    /// <param name="options">Language of the PDF and of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The ZUGFeRD PDF.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> ConvertXRechnungToZugferdAsync(byte[] xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ConvertXRechnungToZugferdAsync(byte[], ConvertToPdfOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> ConvertXRechnungToZugferdAsync(Stream xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates a ZUGFeRD PDF like <see cref="ValidateZugferdAsync(byte[], string?, CancellationToken)"/>
+    /// and returns a printable PDF report with the verdict (<c>POST /v1/validate/zugferd/report</c>).
+    /// </summary>
+    /// <param name="pdf">The ZUGFeRD PDF.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.pdf</c>.</param>
+    /// <param name="validationLanguage">Language of the whole report. Defaults to English.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The report PDF and the verdict. An invalid invoice is a normal result, not an exception.</returns>
+    /// <exception cref="InvoiceXmlApiException">The upload could not be read, or the request was refused.</exception>
+    Task<ValidationReportResult> ValidateZugferdReportAsync(byte[] pdf, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ValidateZugferdReportAsync(byte[], string?, PdfLanguage?, CancellationToken)"/>
+    Task<ValidationReportResult> ValidateZugferdReportAsync(Stream pdf, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Validates an XRechnung XML like <see cref="ValidateXRechnungAsync(byte[], string?, CancellationToken)"/>
+    /// and returns a printable PDF report with the verdict (<c>POST /v1/validate/xrechnung/report</c>).
+    /// </summary>
+    /// <param name="xml">The XRechnung XML.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.xml</c>.</param>
+    /// <param name="validationLanguage">Language of the whole report. Defaults to English.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The report PDF and the verdict. An invalid invoice is a normal result, not an exception.</returns>
+    /// <exception cref="InvoiceXmlApiException">The upload could not be read, or the request was refused.</exception>
+    Task<ValidationReportResult> ValidateXRechnungReportAsync(byte[] xml, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ValidateXRechnungReportAsync(byte[], string?, PdfLanguage?, CancellationToken)"/>
+    Task<ValidationReportResult> ValidateXRechnungReportAsync(Stream xml, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Turns an ordinary PDF invoice into a ZUGFeRD PDF/A-3 (<c>POST /v1/transform/to/zugferd</c>).
+    /// AI reads the PDF, so a person must check the result before it is used.
+    /// A 429 on this method is not retried automatically, so wait for <c>Retry-After</c> before calling again if you want to retry.
+    /// </summary>
+    /// <param name="pdf">The PDF invoice.</param>
+    /// <param name="options">Language, visual layer and language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.pdf</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The ZUGFeRD PDF.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> TransformToZugferdAsync(byte[] pdf, TransformOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="TransformToZugferdAsync(byte[], TransformOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> TransformToZugferdAsync(Stream pdf, TransformOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Turns an ordinary PDF invoice into an XRechnung XML (<c>POST /v1/transform/to/xrechnung</c>).
+    /// AI reads the PDF, so a person must check the result before it is used.
+    /// A 429 on this method is not retried automatically, so wait for <c>Retry-After</c> before calling again if you want to retry.
+    /// </summary>
+    /// <param name="pdf">The PDF invoice.</param>
+    /// <param name="buyerReference">The Leitweg-ID. Takes precedence over anything read from the PDF.</param>
+    /// <param name="options">Language of the findings, or null for the defaults.</param>
+    /// <param name="fileName">File name sent with the upload. Defaults to <c>invoice.pdf</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The XRechnung XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The result would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> TransformToXRechnungAsync(byte[] pdf, string buyerReference, TransformToXRechnungOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="TransformToXRechnungAsync(byte[], string, TransformToXRechnungOptions?, string?, CancellationToken)"/>
+    Task<InvoiceFile> TransformToXRechnungAsync(Stream pdf, string buyerReference, TransformToXRechnungOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads an e-invoice (a ZUGFeRD PDF or an XRechnung XML) into an <see cref="InvoiceDocument"/>

@@ -59,6 +59,43 @@ public class ReadmeExampleTests
     }
 
     [Fact]
+    public async Task Render_convert_report_and_transform_examples_are_sent_as_documented()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyReport(TestData.Pdf, "false");
+        handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
+        handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
+        handler.ReplyFile(TestData.Xml, "application/xml", "rechnung.xml");
+        handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
+        handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
+        handler.ReplyFile(TestData.Xml, "application/xml", "rechnung.xml");
+
+        // Same statements as the README sections, on a mocked transport.
+        var report = await client.ValidateZugferdReportAsync(TestData.Pdf, "supplier-invoice.pdf", PdfLanguage.De);
+        var preview = await client.RenderXRechnungToPdfAsync(TestData.Xml, new RenderOptions { Language = PdfLanguage.De });
+        var pdf = await client.RenderCiiToPdfAsync(TestData.Xml, new RenderOptions
+        {
+            Language = PdfLanguage.De,
+            LogoUrl = "https://example.com/logo.png",
+            IncludeQrCode = true,
+        });
+        var ubl = await client.ConvertZugferdToUblAsync(TestData.Pdf);
+        var zugferd = await client.ConvertXRechnungToZugferdAsync(TestData.Xml, new ConvertToPdfOptions { Language = PdfLanguage.De });
+        var hybrid = await client.TransformToZugferdAsync(TestData.Pdf, new TransformOptions { Language = PdfLanguage.De });
+        var xml = await client.TransformToXRechnungAsync(TestData.Pdf, "04011000-12345-03");
+
+        Assert.Equal(7, handler.Requests.Count);
+        Assert.False(report.Valid);
+        Assert.Equal("application/pdf", report.File.ContentType);
+        Assert.Equal("application/pdf", preview.ContentType);
+        Assert.Equal("application/pdf", pdf.ContentType);
+        Assert.Equal("application/xml", ubl.ContentType);
+        Assert.Equal("application/pdf", zugferd.ContentType);
+        Assert.Equal("application/pdf", hybrid.ContentType);
+        Assert.Equal("application/xml", xml.ContentType);
+    }
+
+    [Fact]
     public void Http_client_factory_registration_resolves_the_interface()
     {
         var services = new ServiceCollection();

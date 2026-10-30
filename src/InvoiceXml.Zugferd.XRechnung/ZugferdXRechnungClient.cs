@@ -19,8 +19,8 @@ namespace InvoiceXml.Zugferd.XRechnung;
 /// </para>
 /// <para>
 /// Requests answered with HTTP 429 are retried after the interval in the <c>Retry-After</c>
-/// header, up to <see cref="InvoiceXmlClientOptions.MaxRetries"/> times. Uploads are buffered in
-/// memory so a retry can resend them.
+/// header, up to <see cref="InvoiceXmlClientOptions.MaxRetries"/> times, except transform calls.
+/// Uploads are buffered in memory so a retry can resend them.
 /// </para>
 /// </remarks>
 public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposable
@@ -169,20 +169,143 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
     }
 
     /// <inheritdoc />
-    public async Task<InvoiceFile> RenderXRechnungToPdfAsync(byte[] xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default)
-    {
-        if (xml is null) throw new ArgumentNullException(nameof(xml));
-        var form = RequestContent.Form(
-            FormPart.FromFile("file", xml, fileName),
-            FormPart.FromValue("language", options?.Language is { } language ? EnumWire<PdfLanguage>.ToWire(language) : null),
-            FormPart.FromValue("logoUrl", options?.LogoUrl));
-        var response = await Transport.PostAsync("v1/render/xrechnung/to/pdf", form, cancellationToken).ConfigureAwait(false);
-        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
-    }
+    public Task<InvoiceFile> RenderXRechnungToPdfAsync(byte[] xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        RenderToPdfAsync("v1/render/xrechnung/to/pdf", xml, options, fileName, cancellationToken);
 
     /// <inheritdoc />
     public async Task<InvoiceFile> RenderXRechnungToPdfAsync(Stream xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
         await RenderXRechnungToPdfAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> RenderCiiToPdfAsync(byte[] xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        RenderToPdfAsync("v1/render/cii/to/pdf", xml, options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> RenderCiiToPdfAsync(Stream xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await RenderCiiToPdfAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertZugferdToUblAsync(byte[] pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertAsync("v1/convert/zugferd/to/ubl", pdf, nameof(pdf), options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertZugferdToUblAsync(Stream pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertZugferdToUblAsync(await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertZugferdToCiiAsync(byte[] pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertAsync("v1/convert/zugferd/to/cii", pdf, nameof(pdf), options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertZugferdToCiiAsync(Stream pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertZugferdToCiiAsync(await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertXRechnungToUblAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertAsync("v1/convert/xrechnung/to/ubl", xml, nameof(xml), options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertXRechnungToUblAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertXRechnungToUblAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertXRechnungToCiiAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertAsync("v1/convert/xrechnung/to/cii", xml, nameof(xml), options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertXRechnungToCiiAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertXRechnungToCiiAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertUblToXRechnungAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertAsync("v1/convert/ubl/to/xrechnung", xml, nameof(xml), options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertUblToXRechnungAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertUblToXRechnungAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertCiiToXRechnungAsync(byte[] xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertAsync("v1/convert/cii/to/xrechnung", xml, nameof(xml), options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertCiiToXRechnungAsync(Stream xml, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertCiiToXRechnungAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertCiiToZugferdAsync(byte[] xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertToPdfAsync("v1/convert/cii/to/zugferd", xml, options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertCiiToZugferdAsync(Stream xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertCiiToZugferdAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertUblToZugferdAsync(byte[] xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertToPdfAsync("v1/convert/ubl/to/zugferd", xml, options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertUblToZugferdAsync(Stream xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertUblToZugferdAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<InvoiceFile> ConvertXRechnungToZugferdAsync(byte[] xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        ConvertToPdfAsync("v1/convert/xrechnung/to/zugferd", xml, options, fileName, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> ConvertXRechnungToZugferdAsync(Stream xml, ConvertToPdfOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ConvertXRechnungToZugferdAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<ValidationReportResult> ValidateZugferdReportAsync(byte[] pdf, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default) =>
+        ValidationReportAsync("v1/validate/zugferd/report", pdf, nameof(pdf), fileName, validationLanguage, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<ValidationReportResult> ValidateZugferdReportAsync(Stream pdf, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default) =>
+        await ValidateZugferdReportAsync(await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false), fileName, validationLanguage, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<ValidationReportResult> ValidateXRechnungReportAsync(byte[] xml, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default) =>
+        ValidationReportAsync("v1/validate/xrechnung/report", xml, nameof(xml), fileName, validationLanguage, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<ValidationReportResult> ValidateXRechnungReportAsync(Stream xml, string? fileName = null, PdfLanguage? validationLanguage = null, CancellationToken cancellationToken = default) =>
+        await ValidateXRechnungReportAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), fileName, validationLanguage, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> TransformToZugferdAsync(byte[] pdf, TransformOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default)
+    {
+        if (pdf is null) throw new ArgumentNullException(nameof(pdf));
+        var form = RequestContent.Form(
+            FormPart.FromFile("file", pdf, fileName),
+            LanguagePart("language", options?.Language),
+            FlagPart("preserveOriginalPdf", options?.PreserveOriginalPdf),
+            FlagPart("includeAdvancedProperties", options?.IncludeAdvancedProperties),
+            LanguagePart("validationLanguage", options?.ValidationLanguage));
+        var response = await Transport.PostAsync("v1/transform/to/zugferd", form, cancellationToken, retryRateLimit: false).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> TransformToZugferdAsync(Stream pdf, TransformOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await TransformToZugferdAsync(await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> TransformToXRechnungAsync(byte[] pdf, string buyerReference, TransformToXRechnungOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default)
+    {
+        if (pdf is null) throw new ArgumentNullException(nameof(pdf));
+        if (string.IsNullOrWhiteSpace(buyerReference)) throw new ArgumentException("A buyer reference is required.", nameof(buyerReference));
+        var form = RequestContent.Form(
+            FormPart.FromFile("file", pdf, fileName),
+            FormPart.FromValue("buyerReference", buyerReference),
+            LanguagePart("validationLanguage", options?.ValidationLanguage));
+        var response = await Transport.PostAsync("v1/transform/to/xrechnung", form, cancellationToken, retryRateLimit: false).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> TransformToXRechnungAsync(Stream pdf, string buyerReference, TransformToXRechnungOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await TransformToXRechnungAsync(await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false), buyerReference, options, fileName, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public async Task<InvoiceDocument> ExtractJsonAsync(byte[] file, string? fileName = null, CancellationToken cancellationToken = default)
@@ -223,4 +346,54 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
         var response = await Transport.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
         return await ApiTransport.ReadJsonAsync<T>(response, cancellationToken).ConfigureAwait(false);
     }
+
+    private async Task<InvoiceFile> RenderToPdfAsync(string path, byte[] xml, RenderOptions? options, string? fileName, CancellationToken cancellationToken)
+    {
+        if (xml is null) throw new ArgumentNullException(nameof(xml));
+        var form = RequestContent.Form(
+            FormPart.FromFile("file", xml, fileName),
+            LanguagePart("language", options?.Language),
+            FormPart.FromValue("logoUrl", options?.LogoUrl),
+            FlagPart("includeQrCode", options?.IncludeQrCode));
+        var response = await Transport.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<InvoiceFile> ConvertAsync(string path, byte[] file, string parameterName, ConvertOptions? options, string? fileName, CancellationToken cancellationToken)
+    {
+        if (file is null) throw new ArgumentNullException(parameterName);
+        var form = RequestContent.Form(
+            FormPart.FromFile("file", file, fileName),
+            LanguagePart("validationLanguage", options?.ValidationLanguage));
+        var response = await Transport.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<InvoiceFile> ConvertToPdfAsync(string path, byte[] xml, ConvertToPdfOptions? options, string? fileName, CancellationToken cancellationToken)
+    {
+        if (xml is null) throw new ArgumentNullException(nameof(xml));
+        var form = RequestContent.Form(
+            FormPart.FromFile("file", xml, fileName),
+            LanguagePart("language", options?.Language),
+            LanguagePart("validationLanguage", options?.ValidationLanguage));
+        var response = await Transport.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<ValidationReportResult> ValidationReportAsync(string path, byte[] file, string parameterName, string? fileName, PdfLanguage? validationLanguage, CancellationToken cancellationToken)
+    {
+        if (file is null) throw new ArgumentNullException(parameterName);
+        var form = RequestContent.Form(
+            FormPart.FromFile("file", file, fileName),
+            LanguagePart("validationLanguage", validationLanguage));
+        var response = await Transport.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadValidationReportAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static FormPart LanguagePart(string name, PdfLanguage? language) =>
+        FormPart.FromValue(name, language is { } value ? EnumWire<PdfLanguage>.ToWire(value) : null);
+
+    // An unset option stays off the form, so the API's default applies; false is sent as false.
+    private static FormPart FlagPart(string name, bool? value) =>
+        FormPart.FromValue(name, value is { } flag ? (flag ? "true" : "false") : null);
 }

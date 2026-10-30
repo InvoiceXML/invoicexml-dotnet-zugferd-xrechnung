@@ -52,6 +52,17 @@ internal sealed class MockHandler : HttpMessageHandler
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = body };
         });
 
+    public MockHandler ReplyReport(byte[] content, string? invoiceValid) =>
+        Reply(() =>
+        {
+            var body = new ByteArrayContent(content);
+            body.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = body };
+            if (invoiceValid is not null)
+                response.Headers.Add("X-Invoice-Valid", invoiceValid);
+            return response;
+        });
+
     public MockHandler ReplyTooManyRequests(TimeSpan? retryAfter)
     {
         return Reply(() =>

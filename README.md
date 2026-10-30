@@ -2,7 +2,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/InvoiceXml.Zugferd.XRechnung.svg)](https://www.nuget.org/packages/InvoiceXml.Zugferd.XRechnung)
 
-Create, validate, embed, render and read German e-invoices from C#. `InvoiceXml.Zugferd.XRechnung` is a thin, typed client for the [InvoiceXML API](https://www.invoicexml.com): you pass an EN 16931 invoice object and get back a ZUGFeRD PDF/A-3 or an XRechnung XML that has already passed the official rules.
+Create, validate, embed, render, convert and read German e-invoices from C#. `InvoiceXml.Zugferd.XRechnung` is a thin, typed client for the [InvoiceXML API](https://www.invoicexml.com): you pass an EN 16931 invoice object and get back a ZUGFeRD PDF/A-3 or an XRechnung XML that has already passed the official rules.
 
 - **ZUGFeRD 2.x**: hybrid PDF/A-3 with the invoice XML embedded, EN 16931 profile by default, every official profile selectable.
 - **XRechnung**: UBL or CII syntax, checked against EN 16931 and the KoSIT rules for German public sector buyers.
@@ -34,7 +34,7 @@ var pdf = await client.CreateZugferdAsync(new InvoiceDocument
 await pdf.SaveAsync("invoice.pdf");
 ```
 
-Totals, VAT breakdowns, the issue date and default payment terms are filled in by the API when you leave them empty. Get an API key with the **30-day free trial: 100 credits, no credit card required** at [www.invoicexml.com/signup](https://www.invoicexml.com/signup).
+Totals, VAT breakdowns, the issue date and default payment terms are filled in by the API when you leave them empty. Get an API key with the **30-day free trial: 100 credits, no credit card required** at [www.invoicexml.com/account/signup](https://www.invoicexml.com/account/signup).
 
 ## Why InvoiceXML
 
@@ -159,7 +159,7 @@ await client.EmailXRechnungAsync(invoice, email, new XRechnungOptions { Syntax =
 await client.EmailEmbeddedZugferdAsync(File.ReadAllBytes("invoice.pdf"), File.ReadAllBytes("factur-x.xml"), email);
 ```
 
-The sender must be on a domain you have added and verified on the Verified email domains page of your dashboard. A domain that is not verified yet throws `InvoiceXmlApiException` with `ErrorCode` `InvoiceXmlErrorCode.EmailDomainNotVerified`. `accepted` means the email was handed over for delivery, not that the recipient's server has received it yet. The client retries these calls only on HTTP 429, when nothing was sent. A timeout or `HttpRequestException` may leave the email sent, so check before you send it again. The same goes for a 503 with error code 4023, which can happen while the email is being sent. If you add your own retry handler to the `HttpClient`, leave these routes out: a second attempt could send a second email. See the [email delivery guide](https://www.invoicexml.com/docs/api/create/zugferd/email).
+The sender must be on a domain you have added and verified on the Verified email domains page of your dashboard. A domain that is not verified yet throws `InvoiceXmlApiException` with `ErrorCode` `InvoiceXmlErrorCode.EmailDomainNotVerified`. `accepted` means the email was handed over for delivery, not that the recipient's server has received it yet. The client retries these calls only on HTTP 429, when nothing was sent. A timeout or `HttpRequestException` may leave the email sent, so check before you send it again. If you add your own retry handler to the `HttpClient`, leave these routes out: a second attempt could send a second email. See the [email delivery guide](https://www.invoicexml.com/docs/api/create/zugferd/email).
 
 ### Validate incoming invoices
 
@@ -182,6 +182,64 @@ else
 
 `ValidateXRechnungAsync` does the same for XRechnung XML in UBL or CII syntax. A finding with layer `cius` means the invoice meets EN 16931 but misses a German requirement, such as a missing Leitweg-ID. `result.Report` lists every invoice field with its value and the findings that concern it, ready for a review screen.
 
+### Get a printable validation report
+
+`ValidateZugferdReportAsync` and `ValidateXRechnungReportAsync` run the same validation and return a PDF report for your records, with the verdict next to it. An invalid invoice is not an exception: check `Valid`. It is null when the response carried no verdict.
+
+```csharp
+var report = await client.ValidateZugferdReportAsync(File.ReadAllBytes("supplier-invoice.pdf"), "supplier-invoice.pdf", PdfLanguage.De);
+await report.File.SaveAsync("validation-report.pdf");
+
+if (report.Valid == false)
+    Console.WriteLine("The invoice failed validation, see the report.");
+```
+
+`validationLanguage` words the whole report. See the [validation report docs](https://www.invoicexml.com/docs/api/validate/zugferd/report).
+
+### Render an invoice as a PDF
+
+Turns an XRechnung or CII XML into a readable PDF, for approval workflows and archives.
+
+```csharp
+var preview = await client.RenderXRechnungToPdfAsync(File.ReadAllBytes("rechnung.xml"), new RenderOptions { Language = PdfLanguage.De });
+
+var pdf = await client.RenderCiiToPdfAsync(File.ReadAllBytes("zugferd-invoice.xml"), new RenderOptions
+{
+    Language = PdfLanguage.De,
+    LogoUrl = "https://example.com/logo.png",
+    IncludeQrCode = true,
+});
+```
+
+See the [render docs](https://www.invoicexml.com/docs/api/render/xrechnung/to/pdf).
+
+### Convert between formats
+
+Each convert method names its route: the source format, then the target. PDF sources must carry an embedded XML.
+
+```csharp
+// ZUGFeRD PDF in, UBL XML out.
+var ubl = await client.ConvertZugferdToUblAsync(File.ReadAllBytes("rechnung.pdf"));
+
+// XRechnung XML in, ZUGFeRD PDF with German labels out.
+var zugferd = await client.ConvertXRechnungToZugferdAsync(File.ReadAllBytes("rechnung.xml"), new ConvertToPdfOptions { Language = PdfLanguage.De });
+```
+
+The result is validated before delivery. When it would not be compliant, the method throws `InvoiceXmlApiException` with the findings, worded in `ValidationLanguage` when you set it. See the [convert docs](https://www.invoicexml.com/docs/api/convert/zugferd/to/ubl).
+
+### Transform a PDF invoice
+
+`TransformToZugferdAsync` and `TransformToXRechnungAsync` take an ordinary PDF invoice. AI reads the PDF, so a person must check the result before it is used.
+
+```csharp
+var hybrid = await client.TransformToZugferdAsync(File.ReadAllBytes("rechnung.pdf"), new TransformOptions { Language = PdfLanguage.De });
+
+// The Leitweg-ID is required for an XRechnung.
+var xml = await client.TransformToXRechnungAsync(File.ReadAllBytes("rechnung.pdf"), "04011000-12345-03");
+```
+
+Leave `Language` empty to use the language the invoice is written in. The rendered PDF ends with a section of technical properties for that check; set `IncludeAdvancedProperties = false` for the classic layout alone, or `PreserveOriginalPdf = true` to keep the uploaded PDF as the visual layer. A 429 on these methods is not retried automatically, so wait for `Retry-After` before calling again if you want to retry. See the [transform docs](https://www.invoicexml.com/docs/api/transform/to/zugferd).
+
 ### Read invoices and attachments
 
 ```csharp
@@ -192,9 +250,6 @@ Console.WriteLine($"{received.InvoiceNumber} from {received.Seller?.Name}: {rece
 // Embedded supporting documents (timesheets, delivery notes) as one ZIP.
 var zip = await client.ExtractAttachmentsAsync(File.ReadAllBytes("rechnung.xml"));
 await zip.SaveAsync("attachments.zip");
-
-// A readable PDF of an XRechnung, for approval workflows and archives.
-var preview = await client.RenderXRechnungToPdfAsync(File.ReadAllBytes("rechnung.xml"), new RenderOptions { Language = PdfLanguage.De });
 ```
 
 An extracted `InvoiceDocument` can be passed straight back to a create method, for example to turn an incoming XRechnung into a ZUGFeRD PDF.
@@ -210,7 +265,7 @@ Inject `IZugferdXRechnungClient` where you need it, and fake it in your own unit
 
 ### Rate limits and retries
 
-When more requests of your account run at the same time than your plan allows, the API answers HTTP 429 with a `Retry-After` header. Such a request is not processed and not billed. The client waits the requested interval and retries, up to three times by default:
+When more requests of your account run at the same time than your plan allows, the API answers HTTP 429 with a `Retry-After` header. A 429 is not billed. Every call except transform waits the requested interval and retries, up to three times by default:
 
 ```csharp
 var client = new ZugferdXRechnungClient(new InvoiceXmlClientOptions
@@ -237,11 +292,25 @@ Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusC
 | `EmailXRechnungAsync` | `POST /v1/create/xrechnung/email` | [reference](https://www.invoicexml.com/docs/api/create/xrechnung/email) |
 | `ValidateZugferdAsync` | `POST /v1/validate/zugferd` | [reference](https://www.invoicexml.com/docs/api/validate/zugferd) |
 | `ValidateXRechnungAsync` | `POST /v1/validate/xrechnung` | [reference](https://www.invoicexml.com/docs/api/validate/xrechnung) |
+| `ValidateZugferdReportAsync` | `POST /v1/validate/zugferd/report` | [reference](https://www.invoicexml.com/docs/api/validate/zugferd/report) |
+| `ValidateXRechnungReportAsync` | `POST /v1/validate/xrechnung/report` | [reference](https://www.invoicexml.com/docs/api/validate/xrechnung/report) |
 | `EmbedZugferdAsync` | `POST /v1/embed/zugferd` | [reference](https://www.invoicexml.com/docs/api/embed/zugferd) |
 | `EmailEmbeddedZugferdAsync` | `POST /v1/embed/zugferd/email` | [reference](https://www.invoicexml.com/docs/api/embed/zugferd/email) |
 | `RenderXRechnungToPdfAsync` | `POST /v1/render/xrechnung/to/pdf` | [reference](https://www.invoicexml.com/docs/api/render/xrechnung/to/pdf) |
+| `RenderCiiToPdfAsync` | `POST /v1/render/cii/to/pdf` | [reference](https://www.invoicexml.com/docs/api/render/cii/to/pdf) |
+| `ConvertZugferdToUblAsync` | `POST /v1/convert/zugferd/to/ubl` | [reference](https://www.invoicexml.com/docs/api/convert/zugferd/to/ubl) |
+| `ConvertZugferdToCiiAsync` | `POST /v1/convert/zugferd/to/cii` | [reference](https://www.invoicexml.com/docs/api/convert/zugferd/to/cii) |
+| `ConvertXRechnungToUblAsync` | `POST /v1/convert/xrechnung/to/ubl` | [reference](https://www.invoicexml.com/docs/api/convert/xrechnung/to/ubl) |
+| `ConvertXRechnungToCiiAsync` | `POST /v1/convert/xrechnung/to/cii` | [reference](https://www.invoicexml.com/docs/api/convert/xrechnung/to/cii) |
+| `ConvertUblToXRechnungAsync` | `POST /v1/convert/ubl/to/xrechnung` | [reference](https://www.invoicexml.com/docs/api/convert/ubl/to/xrechnung) |
+| `ConvertCiiToXRechnungAsync` | `POST /v1/convert/cii/to/xrechnung` | [reference](https://www.invoicexml.com/docs/api/convert/cii/to/xrechnung) |
+| `ConvertCiiToZugferdAsync` | `POST /v1/convert/cii/to/zugferd` | [reference](https://www.invoicexml.com/docs/api/convert/cii/to/zugferd) |
+| `ConvertUblToZugferdAsync` | `POST /v1/convert/ubl/to/zugferd` | [reference](https://www.invoicexml.com/docs/api/convert/ubl/to/zugferd) |
+| `ConvertXRechnungToZugferdAsync` | `POST /v1/convert/xrechnung/to/zugferd` | [reference](https://www.invoicexml.com/docs/api/convert/xrechnung/to/zugferd) |
 | `ExtractJsonAsync` | `POST /v1/extract/json` | [reference](https://www.invoicexml.com/docs/api/extract/json) |
 | `ExtractAttachmentsAsync` | `POST /v1/extract/attachments` | [reference](https://www.invoicexml.com/docs/api/extract/attachments) |
+| `TransformToZugferdAsync` | `POST /v1/transform/to/zugferd` | [reference](https://www.invoicexml.com/docs/api/transform/to/zugferd) |
+| `TransformToXRechnungAsync` | `POST /v1/transform/to/xrechnung` | [reference](https://www.invoicexml.com/docs/api/transform/to/xrechnung) |
 
 The complete OpenAPI description is at [api.invoicexml.com/v1/openapi](https://api.invoicexml.com/v1/openapi), with an interactive explorer at [api.invoicexml.com/v1/scalar](https://api.invoicexml.com/v1/scalar/).
 

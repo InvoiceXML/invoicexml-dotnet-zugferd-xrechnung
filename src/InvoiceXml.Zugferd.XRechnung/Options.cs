@@ -17,7 +17,7 @@ public sealed class InvoiceXmlClientOptions
     /// <summary>
     /// How often a request answered with HTTP 429 (Too Many Requests) is retried before an
     /// <see cref="InvoiceXmlRateLimitException"/> is thrown. Defaults to 3; 0 disables retries.
-    /// A request turned away with 429 is never billed, so retrying it is safe.
+    /// Transform calls are never retried. A 429 is not billed.
     /// </summary>
     public int MaxRetries { get; set; } = 3;
 
@@ -76,7 +76,10 @@ public sealed class XRechnungOptions
     public PdfLanguage? Language { get; set; }
 }
 
-/// <summary>Options for <see cref="ZugferdXRechnungClient.RenderXRechnungToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>.</summary>
+/// <summary>
+/// Options for <see cref="ZugferdXRechnungClient.RenderXRechnungToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>
+/// and <see cref="ZugferdXRechnungClient.RenderCiiToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>.
+/// </summary>
 public sealed class RenderOptions
 {
     /// <summary>Language of the rendered PDF. Defaults to English.</summary>
@@ -86,4 +89,69 @@ public sealed class RenderOptions
 #pragma warning disable CA1056 // Kept as string to match the API field and accept any URL text.
     public string? LogoUrl { get; set; }
 #pragma warning restore CA1056
+
+    /// <summary>When true, the PDF prints the EPC payment QR code (GiroCode). Defaults to false.</summary>
+    public bool? IncludeQrCode { get; set; }
+}
+
+/// <summary>
+/// Options for the convert methods that return XML, such as
+/// <see cref="ZugferdXRechnungClient.ConvertZugferdToUblAsync(byte[], ConvertOptions?, string?, System.Threading.CancellationToken)"/>.
+/// </summary>
+public sealed class ConvertOptions
+{
+    /// <summary>Language of the findings when the conversion is refused. Defaults to English.</summary>
+    public PdfLanguage? ValidationLanguage { get; set; }
+}
+
+/// <summary>
+/// Options for the convert methods that return a ZUGFeRD PDF, such as
+/// <see cref="ZugferdXRechnungClient.ConvertCiiToZugferdAsync(byte[], ConvertToPdfOptions?, string?, System.Threading.CancellationToken)"/>.
+/// </summary>
+public sealed class ConvertToPdfOptions
+{
+    /// <summary>
+    /// Language of the rendered PDF, and of the default texts added to the XML when the source
+    /// has none. Defaults to English.
+    /// </summary>
+    public PdfLanguage? Language { get; set; }
+
+    /// <summary>Language of the findings when the conversion is refused. Defaults to English.</summary>
+    public PdfLanguage? ValidationLanguage { get; set; }
+}
+
+/// <summary>Options for <see cref="ZugferdXRechnungClient.TransformToZugferdAsync(byte[], TransformOptions?, string?, System.Threading.CancellationToken)"/>.</summary>
+public sealed class TransformOptions
+{
+    /// <summary>
+    /// Language of the rendered PDF and of the default texts in the XML. When null, the API uses
+    /// the language the invoice is written in, and English when that is not one of the
+    /// <see cref="PdfLanguage"/> values. With <see cref="PreserveOriginalPdf"/> set, it words the
+    /// XML texts only.
+    /// </summary>
+    public PdfLanguage? Language { get; set; }
+
+    /// <summary>
+    /// When true, the uploaded PDF stays as the visual layer and the XML is embedded into it; its
+    /// earlier attachments and form fields are not kept. Defaults to false, when the PDF is
+    /// rendered fresh from the data read.
+    /// </summary>
+    public bool? PreserveOriginalPdf { get; set; }
+
+    /// <summary>
+    /// Whether the rendered PDF ends with a section listing the technical e-invoice properties, so
+    /// they can be checked on the pages. Defaults to true; set false for the classic layout alone.
+    /// Ignored with <see cref="PreserveOriginalPdf"/>.
+    /// </summary>
+    public bool? IncludeAdvancedProperties { get; set; }
+
+    /// <summary>Language of the findings when the result would not be compliant. Defaults to English.</summary>
+    public PdfLanguage? ValidationLanguage { get; set; }
+}
+
+/// <summary>Options for <see cref="ZugferdXRechnungClient.TransformToXRechnungAsync(byte[], string, TransformToXRechnungOptions?, string?, System.Threading.CancellationToken)"/>.</summary>
+public sealed class TransformToXRechnungOptions
+{
+    /// <summary>Language of the findings when the result would not be compliant. Defaults to English.</summary>
+    public PdfLanguage? ValidationLanguage { get; set; }
 }

@@ -44,6 +44,31 @@ public sealed class InvoiceValidationResult
     public IReadOnlyList<FieldReportRow>? Report { get; set; }
 }
 
+/// <summary>
+/// A validation report: the printable PDF and the verdict that came with it. A failed verdict is
+/// a normal result, not an exception.
+/// </summary>
+public sealed class ValidationReportResult
+{
+    /// <summary>Creates a report. Useful when faking <see cref="IZugferdXRechnungClient"/> in tests.</summary>
+    /// <param name="file">The report PDF.</param>
+    /// <param name="valid">The verdict, or null when the response carried none.</param>
+    public ValidationReportResult(InvoiceFile file, bool? valid)
+    {
+        File = file ?? throw new ArgumentNullException(nameof(file));
+        Valid = valid;
+    }
+
+    /// <summary>The report PDF.</summary>
+    public InvoiceFile File { get; }
+
+    /// <summary>
+    /// True when the invoice passed every validation layer, false when it did not. Null when the
+    /// response carried no verdict; the PDF then states the outcome.
+    /// </summary>
+    public bool? Valid { get; }
+}
+
 /// <summary>Details of a validation run.</summary>
 public sealed class ValidationDetails
 {

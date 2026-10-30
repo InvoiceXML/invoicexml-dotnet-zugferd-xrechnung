@@ -19,6 +19,8 @@ namespace InvoiceXml.Zugferd.XRechnung.Internal;
 /// </summary>
 internal sealed class ApiTransport
 {
+    private const string ValidHeader = "X-Invoice-Valid";
+
     private static readonly ProductInfoHeaderValue UserAgent = new("InvoiceXml.Zugferd.XRechnung", PackageVersion());
 
     private readonly HttpClient _http;
@@ -47,7 +49,7 @@ internal sealed class ApiTransport
     /// <summary>Waits between retries. Replaceable in tests.</summary>
     internal Func<TimeSpan, CancellationToken, Task> Delay { get; set; } = Task.Delay;
 
-    public async Task<HttpResponseMessage> PostAsync(string path, Func<HttpContent> createContent, CancellationToken cancellationToken)
+    public async Task<HttpResponseMessage> PostAsync(string path, Func<HttpContent> createContent, CancellationToken cancellationToken, bool retryRateLimit = true)
     {
         for (var attempt = 0; ; attempt++)
         {
@@ -65,7 +67,7 @@ internal sealed class ApiTransport
 
             var retryAfter = RetryAfter(response);
             var wait = retryAfter ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
-            if (attempt >= _maxRetries || wait > _maxRetryDelay)
+            if (!retryRateLimit || attempt >= _maxRetries || wait > _maxRetryDelay)
             {
                 using (response)
                 {
@@ -96,6 +98,15 @@ internal sealed class ApiTransport
             var fileName = (disposition?.FileNameStar ?? disposition?.FileName)?.Trim('"');
             return new InvoiceFile(bytes, contentType, string.IsNullOrEmpty(fileName) ? null : fileName);
         }
+    }
+
+    public static async Task<ValidationReportResult> ReadValidationReportAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var valid = response.Headers.TryGetValues(ValidHeader, out var values) && bool.TryParse(values.FirstOrDefault(), out var verdict)
+            ? verdict
+            : (bool?)null;
+        var file = await ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+        return new ValidationReportResult(file, valid);
     }
 
     public static async Task<T> ReadJsonAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
