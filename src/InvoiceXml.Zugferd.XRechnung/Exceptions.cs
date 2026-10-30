@@ -159,4 +159,16 @@ public enum InvoiceXmlErrorCode
 
     /// <summary>Too many concurrent requests. Retry after the <c>Retry-After</c> interval.</summary>
     TooManyRequests = 4019,
+
+    /// <summary>Your plan does not include email delivery (HTTP 403).</summary>
+    EmailNotInPlan = 4020,
+
+    /// <summary>Email sending is disabled or paused for the account (HTTP 403).</summary>
+    EmailSendingDisabled = 4021,
+
+    /// <summary>The sender's domain has not finished verification (HTTP 400).</summary>
+    EmailDomainNotVerified = 4022,
+
+    /// <summary>The request exceeded the processing time limit (HTTP 503).</summary>
+    ProcessingTimeout = 4023,
 }

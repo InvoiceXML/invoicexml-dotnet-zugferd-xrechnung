@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -86,6 +87,26 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
     }
 
     /// <inheritdoc />
+    public async Task<EmailSendResult> EmailZugferdAsync(InvoiceDocument invoice, EmailMessage email, ZugferdOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (invoice is null) throw new ArgumentNullException(nameof(invoice));
+        if (email is null) throw new ArgumentNullException(nameof(email));
+        var body = RequestContent.JsonBody(new CreateInvoiceEmailRequestBody { Invoice = invoice, Options = InvoiceOptionsBody.From(options), Email = EmailBody.FromMessage(email) });
+        var response = await Transport.PostAsync("v1/create/zugferd/email", body, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadJsonAsync<EmailSendResult>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<EmailSendResult> EmailXRechnungAsync(InvoiceDocument invoice, EmailMessage email, XRechnungOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (invoice is null) throw new ArgumentNullException(nameof(invoice));
+        if (email is null) throw new ArgumentNullException(nameof(email));
+        var body = RequestContent.JsonBody(new CreateInvoiceEmailRequestBody { Invoice = invoice, Options = InvoiceOptionsBody.From(options), Email = EmailBody.FromMessage(email) });
+        var response = await Transport.PostAsync("v1/create/xrechnung/email", body, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadJsonAsync<EmailSendResult>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public Task<InvoiceValidationResult> ValidateZugferdAsync(byte[] pdf, string? fileName = null, CancellationToken cancellationToken = default) =>
         PostFileForJsonAsync<InvoiceValidationResult>("v1/validate/zugferd", pdf, nameof(pdf), fileName, cancellationToken);
 
@@ -120,6 +141,31 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
         var pdfBytes = await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false);
         var xmlBytes = await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false);
         return await EmbedZugferdAsync(pdfBytes, xmlBytes, skipValidation, fileName, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<EmailSendResult> EmailEmbeddedZugferdAsync(byte[] pdf, byte[] xml, EmailMessage email, string? fileName = null, CancellationToken cancellationToken = default)
+    {
+        if (pdf is null) throw new ArgumentNullException(nameof(pdf));
+        if (xml is null) throw new ArgumentNullException(nameof(xml));
+        if (email is null) throw new ArgumentNullException(nameof(email));
+        var parts = new List<FormPart>
+        {
+            FormPart.FromFile("pdf", pdf, fileName ?? "invoice.pdf"),
+            FormPart.FromFile("xml", xml, "invoice.xml"),
+        };
+        parts.AddRange(EmailBody.FromMessage(email).FormParts());
+        var response = await Transport.PostAsync("v1/embed/zugferd/email", RequestContent.Form(parts.ToArray()), cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadJsonAsync<EmailSendResult>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<EmailSendResult> EmailEmbeddedZugferdAsync(Stream pdf, Stream xml, EmailMessage email, string? fileName = null, CancellationToken cancellationToken = default)
+    {
+        if (email is null) throw new ArgumentNullException(nameof(email));
+        var pdfBytes = await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false);
+        var xmlBytes = await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false);
+        return await EmailEmbeddedZugferdAsync(pdfBytes, xmlBytes, email, fileName, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

@@ -40,7 +40,7 @@ Totals, VAT breakdowns, the issue date and default payment terms are filled in b
 
 - **Rule sets updated on their legal effective dates.** New EN 16931, KoSIT and FeRD releases switch server-side on the date they become binding. Your integration and this package stay the same: no package update, no redeploy.
 - **Validated before delivery.** Every invoice is checked against the official rules before it is returned. Data that cannot yield a compliant invoice is refused with the violated rules and the fields to correct.
-- **Zero data retention.** Documents are processed in memory and never stored. See [security](https://www.invoicexml.com/trust).
+- **Zero data retention.** Documents are processed in memory and never stored. See [security](https://www.invoicexml.com/trust). When you email an invoice, it goes to our email service for delivery, and we keep no copy.
 - **Processing in Frankfurt.** EU-only processing in Frankfurt am Main, Germany, GDPR compliant by design.
 - **Integration assistance.** Our engineers help you map your data and get to production. [Contact us](https://www.invoicexml.com/contact).
 
@@ -134,6 +134,33 @@ var embedded = await client.EmbedZugferdAsync(File.ReadAllBytes("invoice.pdf"), 
 
 Set `InvoiceDocument.SpecificationId` to a value from `ZugferdProfiles` to create a profile other than EN 16931, for example `ZugferdProfiles.Extended`.
 
+### Send an invoice by email
+
+The email methods build the invoice exactly like their create and embed counterparts, then send it as a real email from your own address. They return the message id, not the file.
+
+```csharp
+var email = new EmailMessage
+{
+    From = "invoices@yourcompany.com",
+    FromName = "Your Company Billing",
+    To = "accounting@customer.example",
+    Cc = { "archive@yourcompany.com" },
+    Subject = "Rechnung RE-2026-001",
+    Message = "Anbei erhalten Sie Ihre Rechnung.",
+};
+
+var sent = await client.EmailZugferdAsync(invoice, email);
+Console.WriteLine($"{sent.Status}: {sent.MessageId}");
+
+// An XRechnung works the same way.
+await client.EmailXRechnungAsync(invoice, email, new XRechnungOptions { Syntax = XRechnungSyntax.Cii });
+
+// Or send a PDF and a CII XML you already have, always with full validation.
+await client.EmailEmbeddedZugferdAsync(File.ReadAllBytes("invoice.pdf"), File.ReadAllBytes("factur-x.xml"), email);
+```
+
+The sender must be on a domain you have added and verified on the Verified email domains page of your dashboard. A domain that is not verified yet throws `InvoiceXmlApiException` with `ErrorCode` `InvoiceXmlErrorCode.EmailDomainNotVerified`. `accepted` means the email was handed over for delivery, not that the recipient's server has received it yet. The client retries these calls only on HTTP 429, when nothing was sent. A timeout or `HttpRequestException` may leave the email sent, so check before you send it again. The same goes for a 503 with error code 4023, which can happen while the email is being sent. If you add your own retry handler to the `HttpClient`, leave these routes out: a second attempt could send a second email. See the [email delivery guide](https://www.invoicexml.com/docs/api/create/zugferd/email).
+
 ### Validate incoming invoices
 
 A completed validation always returns a result. An invalid invoice is not an exception: check `Valid`.
@@ -206,9 +233,12 @@ Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusC
 |---|---|---|
 | `CreateZugferdAsync` | `POST /v1/create/zugferd` | [reference](https://www.invoicexml.com/docs/api/create/zugferd) |
 | `CreateXRechnungAsync` | `POST /v1/create/xrechnung` | [reference](https://www.invoicexml.com/docs/api/create/xrechnung) |
+| `EmailZugferdAsync` | `POST /v1/create/zugferd/email` | [reference](https://www.invoicexml.com/docs/api/create/zugferd/email) |
+| `EmailXRechnungAsync` | `POST /v1/create/xrechnung/email` | [reference](https://www.invoicexml.com/docs/api/create/xrechnung/email) |
 | `ValidateZugferdAsync` | `POST /v1/validate/zugferd` | [reference](https://www.invoicexml.com/docs/api/validate/zugferd) |
 | `ValidateXRechnungAsync` | `POST /v1/validate/xrechnung` | [reference](https://www.invoicexml.com/docs/api/validate/xrechnung) |
 | `EmbedZugferdAsync` | `POST /v1/embed/zugferd` | [reference](https://www.invoicexml.com/docs/api/embed/zugferd) |
+| `EmailEmbeddedZugferdAsync` | `POST /v1/embed/zugferd/email` | [reference](https://www.invoicexml.com/docs/api/embed/zugferd/email) |
 | `RenderXRechnungToPdfAsync` | `POST /v1/render/xrechnung/to/pdf` | [reference](https://www.invoicexml.com/docs/api/render/xrechnung/to/pdf) |
 | `ExtractJsonAsync` | `POST /v1/extract/json` | [reference](https://www.invoicexml.com/docs/api/extract/json) |
 | `ExtractAttachmentsAsync` | `POST /v1/extract/attachments` | [reference](https://www.invoicexml.com/docs/api/extract/attachments) |

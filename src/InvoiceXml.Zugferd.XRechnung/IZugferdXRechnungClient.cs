@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 namespace InvoiceXml.Zugferd.XRechnung;
 
 /// <summary>
-/// Creates, validates, embeds, renders and reads ZUGFeRD and XRechnung e-invoices through the
-/// InvoiceXML API. Implemented by <see cref="ZugferdXRechnungClient"/>; use the interface to
+/// Creates, validates, embeds, renders, emails and reads ZUGFeRD and XRechnung e-invoices through
+/// the InvoiceXML API. Implemented by <see cref="ZugferdXRechnungClient"/>; use the interface to
 /// inject and fake the client in your own tests.
 /// </summary>
 public interface IZugferdXRechnungClient
@@ -36,6 +36,42 @@ public interface IZugferdXRechnungClient
     /// The invoice would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
     /// </exception>
     Task<InvoiceFile> CreateXRechnungAsync(InvoiceDocument invoice, XRechnungOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a ZUGFeRD invoice exactly like <see cref="CreateZugferdAsync"/> and sends it as a
+    /// real email from your own verified domain (<c>POST /v1/create/zugferd/email</c>). Returns the
+    /// message id of the email, not the file.
+    /// </summary>
+    /// <param name="invoice">The invoice.</param>
+    /// <param name="email">Sender, recipient and, optionally, the copies, subject and text of the email.</param>
+    /// <param name="options">Rendering options, or null for the defaults.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The accepted email with its message id.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The invoice would not be compliant or an email field is invalid (see <see cref="InvoiceXmlApiException.Findings"/>),
+    /// the sender's domain is not verified (<see cref="InvoiceXmlErrorCode.EmailDomainNotVerified"/>),
+    /// your plan does not include email delivery (<see cref="InvoiceXmlErrorCode.EmailNotInPlan"/>),
+    /// sending is disabled for the account (<see cref="InvoiceXmlErrorCode.EmailSendingDisabled"/>), or the request was refused.
+    /// </exception>
+    Task<EmailSendResult> EmailZugferdAsync(InvoiceDocument invoice, EmailMessage email, ZugferdOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates an XRechnung XML exactly like <see cref="CreateXRechnungAsync"/> and sends it as a
+    /// real email from your own verified domain (<c>POST /v1/create/xrechnung/email</c>). Returns
+    /// the message id of the email, not the file.
+    /// </summary>
+    /// <param name="invoice">The invoice. <see cref="InvoiceDocument.BuyerReference"/> carries the Leitweg-ID.</param>
+    /// <param name="email">Sender, recipient and, optionally, the copies, subject and text of the email.</param>
+    /// <param name="options">Syntax and language, or null for the defaults.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The accepted email with its message id.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The invoice would not be compliant or an email field is invalid (see <see cref="InvoiceXmlApiException.Findings"/>),
+    /// the sender's domain is not verified (<see cref="InvoiceXmlErrorCode.EmailDomainNotVerified"/>),
+    /// your plan does not include email delivery (<see cref="InvoiceXmlErrorCode.EmailNotInPlan"/>),
+    /// sending is disabled for the account (<see cref="InvoiceXmlErrorCode.EmailSendingDisabled"/>), or the request was refused.
+    /// </exception>
+    Task<EmailSendResult> EmailXRechnungAsync(InvoiceDocument invoice, EmailMessage email, XRechnungOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates a ZUGFeRD PDF: extracts the embedded XML and checks it against the rules of the
@@ -80,6 +116,28 @@ public interface IZugferdXRechnungClient
 
     /// <inheritdoc cref="EmbedZugferdAsync(byte[], byte[], bool, string?, CancellationToken)"/>
     Task<InvoiceFile> EmbedZugferdAsync(Stream pdf, Stream xml, bool skipValidation = false, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Turns your own PDF plus a CII XML into a ZUGFeRD PDF/A-3, always with full validation, and
+    /// sends it as a real email from your own verified domain (<c>POST /v1/embed/zugferd/email</c>).
+    /// Returns the message id of the email, not the file.
+    /// </summary>
+    /// <param name="pdf">Your invoice PDF, used as the visual layer.</param>
+    /// <param name="xml">The CII invoice XML to embed.</param>
+    /// <param name="email">Sender, recipient and, optionally, the copies, subject and text of the email.</param>
+    /// <param name="fileName">File name of the PDF upload. Defaults to <c>invoice.pdf</c>.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The accepted email with its message id.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The XML is not compliant or an email field is invalid (see <see cref="InvoiceXmlApiException.Findings"/>),
+    /// the sender's domain is not verified (<see cref="InvoiceXmlErrorCode.EmailDomainNotVerified"/>),
+    /// your plan does not include email delivery (<see cref="InvoiceXmlErrorCode.EmailNotInPlan"/>),
+    /// sending is disabled for the account (<see cref="InvoiceXmlErrorCode.EmailSendingDisabled"/>), or the request was refused.
+    /// </exception>
+    Task<EmailSendResult> EmailEmbeddedZugferdAsync(byte[] pdf, byte[] xml, EmailMessage email, string? fileName = null, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="EmailEmbeddedZugferdAsync(byte[], byte[], EmailMessage, string?, CancellationToken)"/>
+    Task<EmailSendResult> EmailEmbeddedZugferdAsync(Stream pdf, Stream xml, EmailMessage email, string? fileName = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Renders an XRechnung XML as a human-readable PDF (<c>POST /v1/render/xrechnung/to/pdf</c>).
