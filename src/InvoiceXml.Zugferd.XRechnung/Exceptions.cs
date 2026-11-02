@@ -172,4 +172,7 @@ public enum InvoiceXmlErrorCode
 
     /// <summary>The request exceeded the processing time limit (HTTP 503).</summary>
     ProcessingTimeout = 4023,
+
+    /// <summary>The amounts read from the PDF do not add up to its printed total (HTTP 400). Billed; correct invoiceData and create the invoice from it.</summary>
+    TotalsMismatch = 4024,
 }
