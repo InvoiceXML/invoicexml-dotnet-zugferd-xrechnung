@@ -64,7 +64,6 @@ public class ReadmeExampleTests
         var (client, handler) = TestData.CreateClient();
         handler.ReplyReport(TestData.Pdf, "false");
         handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
-        handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
         handler.ReplyFile(TestData.Xml, "application/xml", "rechnung.xml");
         handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
         handler.ReplyFile(TestData.Pdf, "application/pdf", "rechnung.pdf");
@@ -72,8 +71,7 @@ public class ReadmeExampleTests
 
         // Same statements as the README sections, on a mocked transport.
         var report = await client.ValidateZugferdReportAsync(TestData.Pdf, "supplier-invoice.pdf", PdfLanguage.De);
-        var preview = await client.RenderXRechnungToPdfAsync(TestData.Xml, new RenderOptions { Language = PdfLanguage.De });
-        var pdf = await client.RenderCiiToPdfAsync(TestData.Xml, new RenderOptions
+        var pdf = await client.RenderXmlToPdfAsync(TestData.Xml, new RenderOptions
         {
             Language = PdfLanguage.De,
             LogoUrl = "https://example.com/logo.png",
@@ -84,10 +82,10 @@ public class ReadmeExampleTests
         var hybrid = await client.TransformToZugferdAsync(TestData.Pdf, new TransformOptions { Language = PdfLanguage.De });
         var xml = await client.TransformToXRechnungAsync(TestData.Pdf, "04011000-12345-03");
 
-        Assert.Equal(7, handler.Requests.Count);
+        Assert.Equal(6, handler.Requests.Count);
         Assert.False(report.Valid);
         Assert.Equal("application/pdf", report.File.ContentType);
-        Assert.Equal("application/pdf", preview.ContentType);
+        Assert.Equal("/v1/render/xml/to/pdf", handler.Requests[1].Uri.AbsolutePath);
         Assert.Equal("application/pdf", pdf.ContentType);
         Assert.Equal("application/xml", ubl.ContentType);
         Assert.Equal("application/pdf", zugferd.ContentType);

@@ -10,12 +10,6 @@ public class RenderConvertReportTransformTests
     private const string MissingFile =
         """{"title":"Missing file","status":400,"detail":"No file was uploaded.","errorCode":4003}""";
 
-    private static readonly Dictionary<string, Route<RenderOptions>> RenderRoutes = new()
-    {
-        ["xrechnung/to/pdf"] = new((c, f, o) => c.RenderXRechnungToPdfAsync(f, o), (c, s, o) => c.RenderXRechnungToPdfAsync(s, o)),
-        ["cii/to/pdf"] = new((c, f, o) => c.RenderCiiToPdfAsync(f, o), (c, s, o) => c.RenderCiiToPdfAsync(s, o)),
-    };
-
     private static readonly Dictionary<string, Route<ConvertOptions>> XmlRoutes = new()
     {
         ["zugferd/to/ubl"] = new((c, f, o) => c.ConvertZugferdToUblAsync(f, o), (c, s, o) => c.ConvertZugferdToUblAsync(s, o)),
@@ -39,21 +33,18 @@ public class RenderConvertReportTransformTests
     private delegate Task<InvoiceFile> StreamCall<TOptions>(IZugferdXRechnungClient client, Stream file, TOptions? options)
         where TOptions : class;
 
-    [Theory]
-    [InlineData("xrechnung/to/pdf")]
-    [InlineData("cii/to/pdf")]
-    public async Task Render_sends_every_option(string route)
+    [Fact]
+    public async Task RenderXml_sends_every_option()
     {
         var (client, handler) = TestData.CreateClient();
         handler.ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf");
 
-        var file = await RenderRoutes[route].Bytes(
-            client,
+        var file = await client.RenderXmlToPdfAsync(
             TestData.Xml,
             new RenderOptions { Language = PdfLanguage.Fr, LogoUrl = "https://example.com/logo.png", IncludeQrCode = true });
 
         var request = Assert.Single(handler.Requests);
-        Assert.Equal($"/v1/render/{route}", request.Uri.AbsolutePath);
+        Assert.Equal("/v1/render/xml/to/pdf", request.Uri.AbsolutePath);
         Assert.Equal(TestData.Xml, request.Part("file").Body);
         Assert.Equal("fr", request.Part("language").Text);
         Assert.Equal("https://example.com/logo.png", request.Part("logoUrl").Text);
@@ -61,43 +52,29 @@ public class RenderConvertReportTransformTests
         Assert.Equal("application/pdf", file.ContentType);
     }
 
-    [Theory]
-    [InlineData("xrechnung/to/pdf")]
-    [InlineData("cii/to/pdf")]
-    public async Task Render_omits_unset_options(string route)
+    [Fact]
+    public async Task RenderXml_omits_unset_options()
     {
         var (client, handler) = TestData.CreateClient();
-        handler.ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf");
+        handler.ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf").ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf");
 
-        await RenderRoutes[route].Bytes(client, TestData.Xml, null);
+        await client.RenderXmlToPdfAsync(TestData.Xml);
+        using var stream = new MemoryStream(TestData.Xml);
+        await client.RenderXmlToPdfAsync(stream, new RenderOptions());
 
-        Assert.Equal("file", Assert.Single(handler.Requests[0].Parts).Name);
+        Assert.All(handler.Requests, request => Assert.Equal("file", Assert.Single(request.Parts).Name));
+        Assert.Equal(TestData.Xml, handler.Requests[1].Part("file").Body);
     }
 
     [Fact]
-    public async Task Render_sends_a_qr_code_set_to_false()
+    public async Task RenderXml_sends_a_qr_code_set_to_false()
     {
         var (client, handler) = TestData.CreateClient();
         handler.ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf");
 
-        await client.RenderCiiToPdfAsync(TestData.Xml, new RenderOptions { IncludeQrCode = false });
+        await client.RenderXmlToPdfAsync(TestData.Xml, new RenderOptions { IncludeQrCode = false });
 
         Assert.Equal("false", handler.Requests[0].Part("includeQrCode").Text);
-    }
-
-    [Theory]
-    [InlineData("xrechnung/to/pdf")]
-    [InlineData("cii/to/pdf")]
-    public async Task Render_stream_overload_uploads_the_stream(string route)
-    {
-        var (client, handler) = TestData.CreateClient();
-        handler.ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf");
-
-        using var stream = new MemoryStream(TestData.Xml);
-        await RenderRoutes[route].Stream(client, stream, null);
-
-        Assert.Equal($"/v1/render/{route}", handler.Requests[0].Uri.AbsolutePath);
-        Assert.Equal(TestData.Xml, handler.Requests[0].Part("file").Body);
     }
 
     [Theory]
@@ -415,12 +392,12 @@ public class RenderConvertReportTransformTests
         handler.ReplyTooManyRequests(TimeSpan.FromSeconds(1)).ReplyFile(TestData.Xml, "application/xml", "invoice.xml");
         handler.ReplyTooManyRequests(TimeSpan.FromSeconds(1)).ReplyReport(TestData.Pdf, "true");
 
-        await client.RenderCiiToPdfAsync(TestData.Xml);
+        await client.RenderXmlToPdfAsync(TestData.Xml);
         await client.ConvertZugferdToUblAsync(TestData.Pdf);
         await client.ValidateZugferdReportAsync(TestData.Pdf);
 
         Assert.Equal(
-            ["/v1/render/cii/to/pdf", "/v1/render/cii/to/pdf", "/v1/convert/zugferd/to/ubl", "/v1/convert/zugferd/to/ubl", "/v1/validate/zugferd/report", "/v1/validate/zugferd/report"],
+            ["/v1/render/xml/to/pdf", "/v1/render/xml/to/pdf", "/v1/convert/zugferd/to/ubl", "/v1/convert/zugferd/to/ubl", "/v1/validate/zugferd/report", "/v1/validate/zugferd/report"],
             handler.Requests.Select(r => r.Uri.AbsolutePath));
     }
 
@@ -429,7 +406,7 @@ public class RenderConvertReportTransformTests
     {
         var (client, handler) = TestData.CreateClient();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => client.RenderCiiToPdfAsync((byte[])null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => client.RenderXmlToPdfAsync((byte[])null!));
         await Assert.ThrowsAsync<ArgumentNullException>(() => client.ConvertZugferdToUblAsync((byte[])null!));
         await Assert.ThrowsAsync<ArgumentNullException>(() => client.ConvertCiiToZugferdAsync((byte[])null!));
         await Assert.ThrowsAsync<ArgumentNullException>(() => client.ValidateZugferdReportAsync((byte[])null!));

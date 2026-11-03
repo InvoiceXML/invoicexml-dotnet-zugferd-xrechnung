@@ -56,7 +56,7 @@ public class LiveApiTests(ITestOutputHelper output)
         Assert.Equal("xrechnung", validation.Data?.Profile);
         Assert.Empty(validation.Warnings);
 
-        var preview = await Run(() => client.RenderXRechnungToPdfAsync(cii.ToArray(), new RenderOptions { Language = PdfLanguage.De }, cii.FileName));
+        var preview = await Run(() => client.RenderXmlToPdfAsync(cii.ToArray(), new RenderOptions { Language = PdfLanguage.De }, cii.FileName));
         await LiveApi.SaveAsync(preview, "xrechnung-preview.pdf");
         Assert.Equal("application/pdf", preview.ContentType);
         Assert.StartsWith("%PDF", Encoding.ASCII.GetString(preview.ToArray(), 0, 4));

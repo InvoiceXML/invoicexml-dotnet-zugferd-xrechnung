@@ -139,6 +139,16 @@ internal sealed class InvoiceJsonResponseBody
     public InvoiceDocument? Invoice { get; set; }
 }
 
+/// <summary>The <c>{ "invoice": ..., "confidence": ..., "language": ... }</c> envelope returned by <c>/v1/parse/json</c>.</summary>
+internal sealed class ParseJsonResponseBody
+{
+    public InvoiceDocument? Invoice { get; set; }
+
+    public ParseConfidence? Confidence { get; set; }
+
+    public string? Language { get; set; }
+}
+
 /// <summary>RFC 7807 problem details with the API's extensions.</summary>
 internal sealed class ProblemBody
 {

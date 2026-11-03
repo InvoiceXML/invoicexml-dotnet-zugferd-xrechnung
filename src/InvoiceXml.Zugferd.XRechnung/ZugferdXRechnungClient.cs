@@ -19,7 +19,7 @@ namespace InvoiceXml.Zugferd.XRechnung;
 /// </para>
 /// <para>
 /// Requests answered with HTTP 429 are retried after the interval in the <c>Retry-After</c>
-/// header, up to <see cref="InvoiceXmlClientOptions.MaxRetries"/> times, except transform calls.
+/// header, up to <see cref="InvoiceXmlClientOptions.MaxRetries"/> times, except transform and parse calls.
 /// Uploads are buffered in memory so a retry can resend them.
 /// </para>
 /// </remarks>
@@ -187,20 +187,21 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
     }
 
     /// <inheritdoc />
-    public Task<InvoiceFile> RenderXRechnungToPdfAsync(byte[] xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
-        RenderToPdfAsync("v1/render/xrechnung/to/pdf", xml, options, fileName, cancellationToken);
+    public async Task<InvoiceFile> RenderXmlToPdfAsync(byte[] xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default)
+    {
+        if (xml is null) throw new ArgumentNullException(nameof(xml));
+        var form = RequestContent.Form(
+            FormPart.FromFile("file", xml, fileName),
+            LanguagePart("language", options?.Language),
+            FormPart.FromValue("logoUrl", options?.LogoUrl),
+            FlagPart("includeQrCode", options?.IncludeQrCode));
+        var response = await Transport.PostAsync("v1/render/xml/to/pdf", form, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
-    public async Task<InvoiceFile> RenderXRechnungToPdfAsync(Stream xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
-        await RenderXRechnungToPdfAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
-
-    /// <inheritdoc />
-    public Task<InvoiceFile> RenderCiiToPdfAsync(byte[] xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
-        RenderToPdfAsync("v1/render/cii/to/pdf", xml, options, fileName, cancellationToken);
-
-    /// <inheritdoc />
-    public async Task<InvoiceFile> RenderCiiToPdfAsync(Stream xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
-        await RenderCiiToPdfAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
+    public async Task<InvoiceFile> RenderXmlToPdfAsync(Stream xml, RenderOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await RenderXmlToPdfAsync(await RequestContent.BufferAsync(xml, cancellationToken).ConfigureAwait(false), options, fileName, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public Task<InvoiceFile> ConvertZugferdToUblAsync(byte[] pdf, ConvertOptions? options = null, string? fileName = null, CancellationToken cancellationToken = default) =>
@@ -337,6 +338,19 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
         await ExtractJsonAsync(await RequestContent.BufferAsync(file, cancellationToken).ConfigureAwait(false), fileName, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
+    public async Task<ParsedInvoice> ParseJsonAsync(byte[] pdf, string? fileName = null, CancellationToken cancellationToken = default)
+    {
+        // A retry would repeat the AI read, so a 429 is handed to the caller.
+        var result = await PostFileForJsonAsync<ParseJsonResponseBody>("v1/parse/json", pdf, nameof(pdf), fileName, cancellationToken, retryRateLimit: false).ConfigureAwait(false);
+        var invoice = result.Invoice ?? throw new InvoiceXmlApiException(System.Net.HttpStatusCode.OK, "InvoiceXML API returned no invoice.");
+        return new ParsedInvoice(invoice, result.Confidence, result.Language);
+    }
+
+    /// <inheritdoc />
+    public async Task<ParsedInvoice> ParseJsonAsync(Stream pdf, string? fileName = null, CancellationToken cancellationToken = default) =>
+        await ParseJsonAsync(await RequestContent.BufferAsync(pdf, cancellationToken).ConfigureAwait(false), fileName, cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
     public async Task<InvoiceFile> ExtractAttachmentsAsync(byte[] file, string? fileName = null, CancellationToken cancellationToken = default)
     {
         if (file is null) throw new ArgumentNullException(nameof(file));
@@ -356,25 +370,13 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
             _http.Dispose();
     }
 
-    private async Task<T> PostFileForJsonAsync<T>(string path, byte[] file, string parameterName, string? fileName, CancellationToken cancellationToken)
+    private async Task<T> PostFileForJsonAsync<T>(string path, byte[] file, string parameterName, string? fileName, CancellationToken cancellationToken, bool retryRateLimit = true)
         where T : class
     {
         if (file is null) throw new ArgumentNullException(parameterName);
         var form = RequestContent.Form(FormPart.FromFile("file", file, fileName));
-        var response = await Transport.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
+        var response = await Transport.PostAsync(path, form, cancellationToken, retryRateLimit).ConfigureAwait(false);
         return await ApiTransport.ReadJsonAsync<T>(response, cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<InvoiceFile> RenderToPdfAsync(string path, byte[] xml, RenderOptions? options, string? fileName, CancellationToken cancellationToken)
-    {
-        if (xml is null) throw new ArgumentNullException(nameof(xml));
-        var form = RequestContent.Form(
-            FormPart.FromFile("file", xml, fileName),
-            LanguagePart("language", options?.Language),
-            FormPart.FromValue("logoUrl", options?.LogoUrl),
-            FlagPart("includeQrCode", options?.IncludeQrCode));
-        var response = await Transport.PostAsync(path, form, cancellationToken).ConfigureAwait(false);
-        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<InvoiceFile> ConvertAsync(string path, byte[] file, string parameterName, ConvertOptions? options, string? fileName, CancellationToken cancellationToken)

@@ -210,12 +210,10 @@ if (report.Valid == false)
 
 ### Render an invoice as a PDF
 
-Turns an XRechnung or CII XML into a readable PDF, for approval workflows and archives.
+Turns any invoice XML into a readable PDF, for approval workflows and archives. XRechnung, CII and UBL are all accepted, and the format is detected from the XML.
 
 ```csharp
-var preview = await client.RenderXRechnungToPdfAsync(File.ReadAllBytes("rechnung.xml"), new RenderOptions { Language = PdfLanguage.De });
-
-var pdf = await client.RenderCiiToPdfAsync(File.ReadAllBytes("zugferd-invoice.xml"), new RenderOptions
+var pdf = await client.RenderXmlToPdfAsync(File.ReadAllBytes("rechnung.xml"), new RenderOptions
 {
     Language = PdfLanguage.De,
     LogoUrl = "https://example.com/logo.png",
@@ -223,7 +221,7 @@ var pdf = await client.RenderCiiToPdfAsync(File.ReadAllBytes("zugferd-invoice.xm
 });
 ```
 
-See the [render docs](https://www.invoicexml.com/docs/api/render/xrechnung/to/pdf).
+See the [render docs](https://www.invoicexml.com/docs/api/render/xml/to/pdf).
 
 ### Convert between formats
 
@@ -266,6 +264,18 @@ await zip.SaveAsync("attachments.zip");
 
 An extracted `InvoiceDocument` can be passed straight back to a create method, for example to turn an incoming XRechnung into a ZUGFeRD PDF.
 
+### Read a PDF invoice with AI
+
+`ParseJsonAsync` reads an ordinary PDF invoice, typed, scanned or photographed, into the same `InvoiceDocument` model. AI reads the PDF, so a person must check the data before it is used. The result says how sure the read was and which language the invoice is written in.
+
+```csharp
+var parsed = await client.ParseJsonAsync(File.ReadAllBytes("scanned-invoice.pdf"));
+Console.WriteLine($"{parsed.Invoice.InvoiceNumber}: {parsed.Invoice.Totals?.DuePayableAmount} {parsed.Invoice.Currency}");
+Console.WriteLine($"Confidence {parsed.Confidence?.Overall}, line items {parsed.Confidence?.Areas.LineItems}, language {parsed.Language}");
+```
+
+Any XML embedded in the PDF is ignored; use `ExtractJsonAsync` to read that. A 429 on this method is not retried automatically, so wait for `Retry-After` before calling again if you want to retry. See the [parse docs](https://www.invoicexml.com/docs/api/parse/json).
+
 ### ASP.NET Core and IHttpClientFactory
 
 ```csharp
@@ -294,6 +304,10 @@ If the API still answers 429, the client throws `InvoiceXmlRateLimitException` w
 
 Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusCode`, the API's numeric `ErrorCode` (see `InvoiceXmlErrorCode`), `Title`, `Detail` and a `TraceId` to quote when contacting support. The full list is in the [error handling docs](https://www.invoicexml.com/docs/error-handling).
 
+## Examples
+
+The [examples](https://github.com/InvoiceXML/invoicexml-dotnet-zugferd-xrechnung/tree/main/examples) folder holds small console apps that each show one common task from start to finish: creating a ZUGFeRD invoice with your own PDF, creating a CII XML and embedding it, emailing an invoice or your own PDF, validating, rendering, converting, transforming a PDF invoice, reading a PDF invoice with AI and reading e-invoices. See the [examples overview](https://github.com/InvoiceXML/invoicexml-dotnet-zugferd-xrechnung/blob/main/examples/README.md) for the list and how to run them.
+
 ## Endpoints
 
 | Method | Endpoint | Docs |
@@ -310,8 +324,7 @@ Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusC
 | `ValidateXRechnungReportAsync` | `POST /v1/validate/xrechnung/report` | [reference](https://www.invoicexml.com/docs/api/validate/xrechnung/report) |
 | `EmbedZugferdAsync` | `POST /v1/embed/zugferd` | [reference](https://www.invoicexml.com/docs/api/embed/zugferd) |
 | `EmailEmbeddedZugferdAsync` | `POST /v1/embed/zugferd/email` | [reference](https://www.invoicexml.com/docs/api/embed/zugferd/email) |
-| `RenderXRechnungToPdfAsync` | `POST /v1/render/xrechnung/to/pdf` | [reference](https://www.invoicexml.com/docs/api/render/xrechnung/to/pdf) |
-| `RenderCiiToPdfAsync` | `POST /v1/render/cii/to/pdf` | [reference](https://www.invoicexml.com/docs/api/render/cii/to/pdf) |
+| `RenderXmlToPdfAsync` | `POST /v1/render/xml/to/pdf` | [reference](https://www.invoicexml.com/docs/api/render/xml/to/pdf) |
 | `ConvertZugferdToUblAsync` | `POST /v1/convert/zugferd/to/ubl` | [reference](https://www.invoicexml.com/docs/api/convert/zugferd/to/ubl) |
 | `ConvertZugferdToCiiAsync` | `POST /v1/convert/zugferd/to/cii` | [reference](https://www.invoicexml.com/docs/api/convert/zugferd/to/cii) |
 | `ConvertXRechnungToUblAsync` | `POST /v1/convert/xrechnung/to/ubl` | [reference](https://www.invoicexml.com/docs/api/convert/xrechnung/to/ubl) |
@@ -323,6 +336,7 @@ Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusC
 | `ConvertXRechnungToZugferdAsync` | `POST /v1/convert/xrechnung/to/zugferd` | [reference](https://www.invoicexml.com/docs/api/convert/xrechnung/to/zugferd) |
 | `ExtractJsonAsync` | `POST /v1/extract/json` | [reference](https://www.invoicexml.com/docs/api/extract/json) |
 | `ExtractAttachmentsAsync` | `POST /v1/extract/attachments` | [reference](https://www.invoicexml.com/docs/api/extract/attachments) |
+| `ParseJsonAsync` | `POST /v1/parse/json` | [reference](https://www.invoicexml.com/docs/api/parse/json) |
 | `TransformToZugferdAsync` | `POST /v1/transform/to/zugferd` | [reference](https://www.invoicexml.com/docs/api/transform/to/zugferd) |
 | `TransformToXRechnungAsync` | `POST /v1/transform/to/xrechnung` | [reference](https://www.invoicexml.com/docs/api/transform/to/xrechnung) |
 

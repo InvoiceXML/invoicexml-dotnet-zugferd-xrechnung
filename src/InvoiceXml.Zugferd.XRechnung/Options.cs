@@ -17,7 +17,7 @@ public sealed class InvoiceXmlClientOptions
     /// <summary>
     /// How often a request answered with HTTP 429 (Too Many Requests) is retried before an
     /// <see cref="InvoiceXmlRateLimitException"/> is thrown. Defaults to 3; 0 disables retries.
-    /// Transform calls are never retried. A 429 is not billed.
+    /// Transform and parse calls are never retried. A 429 is not billed.
     /// </summary>
     public int MaxRetries { get; set; } = 3;
 
@@ -103,8 +103,7 @@ public sealed class CiiOptions
 }
 
 /// <summary>
-/// Options for <see cref="ZugferdXRechnungClient.RenderXRechnungToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>
-/// and <see cref="ZugferdXRechnungClient.RenderCiiToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>.
+/// Options for <see cref="ZugferdXRechnungClient.RenderXmlToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>.
 /// </summary>
 public sealed class RenderOptions
 {

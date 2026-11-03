@@ -8,3 +8,7 @@ TestResults/
 .idea/
 *.nupkg
 *.snupkg
+
+# Output of the examples, which write to the folder they run from
+/*.pdf
+/*.zip

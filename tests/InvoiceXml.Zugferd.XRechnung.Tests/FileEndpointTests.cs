@@ -136,24 +136,6 @@ public class FileEndpointTests
     }
 
     [Fact]
-    public async Task RenderXRechnung_sends_language_and_logo()
-    {
-        var (client, handler) = TestData.CreateClient();
-        handler.ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf");
-
-        var file = await client.RenderXRechnungToPdfAsync(
-            TestData.Xml,
-            new RenderOptions { Language = PdfLanguage.De, LogoUrl = "https://example.com/logo.png" });
-
-        var request = Assert.Single(handler.Requests);
-        Assert.Equal("/v1/render/xrechnung/to/pdf", request.Uri.AbsolutePath);
-        Assert.Equal(TestData.Xml, request.Part("file").Body);
-        Assert.Equal("de", request.Part("language").Text);
-        Assert.Equal("https://example.com/logo.png", request.Part("logoUrl").Text);
-        Assert.Equal("application/pdf", file.ContentType);
-    }
-
-    [Fact]
     public async Task ExtractJson_returns_the_invoice_document()
     {
         var (client, handler) = TestData.CreateClient();
@@ -191,6 +173,68 @@ public class FileEndpointTests
 
         // A code this package version does not know yet reads as null instead of failing.
         Assert.Null(invoice.Lines[0].Item?.CountryOfOrigin);
+    }
+
+    [Fact]
+    public async Task ParseJson_returns_the_invoice_confidence_and_language()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyJson(
+            """
+            {
+              "invoice": { "invoiceNumber": "RE-2026-0815", "currency": "EUR", "lines": [ { "quantity": 2, "priceDetails": { "netPrice": 50 } } ] },
+              "confidence": { "overall": 0.91, "areas": { "sellerIdentification": 0.98, "buyerIdentification": 0.95, "taxCalculation": 0.9, "lineItems": null } },
+              "language": "de"
+            }
+            """);
+
+        var parsed = await client.ParseJsonAsync(TestData.Pdf, "scan.pdf");
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/v1/parse/json", request.Uri.AbsolutePath);
+        Assert.Equal(TestData.Pdf, request.Part("file").Body);
+        Assert.Equal("scan.pdf", request.Part("file").FileName);
+        Assert.Equal("RE-2026-0815", parsed.Invoice.InvoiceNumber);
+        Assert.Equal(2m, parsed.Invoice.Lines[0].Quantity);
+        Assert.Equal(0.91m, parsed.Confidence?.Overall);
+        Assert.Equal(0.98m, parsed.Confidence?.Areas.SellerIdentification);
+        Assert.Null(parsed.Confidence?.Areas.LineItems);
+        Assert.Equal("de", parsed.Language);
+    }
+
+    [Fact]
+    public async Task ParseJson_without_confidence_or_language_returns_nulls()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyJson("""{ "invoice": { "invoiceNumber": "RE-2026-0816" } }""");
+
+        using var stream = new MemoryStream(TestData.Pdf);
+        var parsed = await client.ParseJsonAsync(stream);
+
+        Assert.Equal(TestData.Pdf, Assert.Single(handler.Requests).Part("file").Body);
+        Assert.Equal("RE-2026-0816", parsed.Invoice.InvoiceNumber);
+        Assert.Null(parsed.Confidence);
+        Assert.Null(parsed.Language);
+        await Assert.ThrowsAsync<ArgumentNullException>(() => client.ParseJsonAsync((byte[])null!));
+    }
+
+    [Fact]
+    public async Task ParseJson_does_not_retry_too_many_requests()
+    {
+        var (client, handler) = TestData.CreateClient();
+        var delays = new List<TimeSpan>();
+        client.Transport.Delay = (delay, _) =>
+        {
+            delays.Add(delay);
+            return Task.CompletedTask;
+        };
+        handler.ReplyTooManyRequests(TimeSpan.FromSeconds(7));
+
+        var ex = await Assert.ThrowsAsync<InvoiceXmlRateLimitException>(() => client.ParseJsonAsync(TestData.Pdf));
+
+        Assert.Equal("/v1/parse/json", Assert.Single(handler.Requests).Uri.AbsolutePath);
+        Assert.Empty(delays);
+        Assert.Equal(TimeSpan.FromSeconds(7), ex.RetryAfter);
     }
 
     [Fact]
