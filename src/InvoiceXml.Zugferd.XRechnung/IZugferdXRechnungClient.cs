@@ -38,6 +38,33 @@ public interface IZugferdXRechnungClient
     Task<InvoiceFile> CreateXRechnungAsync(InvoiceDocument invoice, XRechnungOptions? options = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Creates a plain UN/CEFACT CII XML, validated against EN 16931 before delivery
+    /// (<c>POST /v1/create/cii</c>). Pass it to <see cref="EmbedZugferdAsync(byte[], byte[], bool, string?, CancellationToken)"/>
+    /// to turn your own PDF into a ZUGFeRD invoice.
+    /// </summary>
+    /// <param name="invoice">The invoice.</param>
+    /// <param name="options">Language, or null for the defaults.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The CII XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The invoice would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> CreateCiiAsync(InvoiceDocument invoice, CiiOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a UBL 2.1 invoice XML in the profile you choose (Peppol BIS Billing 3.0 by default),
+    /// validated against that profile's rules before delivery (<c>POST /v1/create/ubl</c>).
+    /// </summary>
+    /// <param name="invoice">The invoice.</param>
+    /// <param name="options">Profile and language, or null for the defaults.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The UBL XML.</returns>
+    /// <exception cref="InvoiceXmlApiException">
+    /// The invoice would not be compliant (see <see cref="InvoiceXmlApiException.Findings"/>), or the request was refused.
+    /// </exception>
+    Task<InvoiceFile> CreateUblAsync(InvoiceDocument invoice, UblOptions? options = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Creates a ZUGFeRD invoice exactly like <see cref="CreateZugferdAsync"/> and sends it as a
     /// real email from your own verified domain (<c>POST /v1/create/zugferd/email</c>). Returns the
     /// message id of the email, not the file.

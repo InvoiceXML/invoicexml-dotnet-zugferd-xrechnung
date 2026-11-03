@@ -76,6 +76,32 @@ public sealed class XRechnungOptions
     public PdfLanguage? Language { get; set; }
 }
 
+/// <summary>Options for <see cref="ZugferdXRechnungClient.CreateUblAsync"/>.</summary>
+public sealed class UblOptions
+{
+    /// <summary>
+    /// UBL profile, a value from <see cref="UblProfiles"/>. It picks the identifier the invoice
+    /// declares and the rule set it is validated against. Defaults to <see cref="UblProfiles.PeppolBis3"/>.
+    /// </summary>
+    public string? Profile { get; set; }
+
+    /// <summary>
+    /// Language of the default texts the API writes when you leave them empty, such as payment
+    /// terms. Defaults to English.
+    /// </summary>
+    public PdfLanguage? Language { get; set; }
+}
+
+/// <summary>Options for <see cref="ZugferdXRechnungClient.CreateCiiAsync"/>.</summary>
+public sealed class CiiOptions
+{
+    /// <summary>
+    /// Language of the default texts the API writes when you leave them empty, such as payment
+    /// terms. Defaults to English.
+    /// </summary>
+    public PdfLanguage? Language { get; set; }
+}
+
 /// <summary>
 /// Options for <see cref="ZugferdXRechnungClient.RenderXRechnungToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>
 /// and <see cref="ZugferdXRechnungClient.RenderCiiToPdfAsync(byte[], RenderOptions?, string?, System.Threading.CancellationToken)"/>.

@@ -84,6 +84,8 @@ internal sealed class EmailBody
 /// <summary>The <c>options</c> object of the create endpoints.</summary>
 internal sealed class InvoiceOptionsBody
 {
+    public string? Profile { get; set; }
+
     public XRechnungSyntax? Syntax { get; set; }
 
     public PdfLanguage? Language { get; set; }
@@ -112,6 +114,21 @@ internal sealed class InvoiceOptionsBody
         : new InvoiceOptionsBody
         {
             Syntax = options.Syntax,
+            Language = options.Language,
+        };
+
+    public static InvoiceOptionsBody? From(CiiOptions? options) => options is null
+        ? null
+        : new InvoiceOptionsBody
+        {
+            Language = options.Language,
+        };
+
+    public static InvoiceOptionsBody? From(UblOptions? options) => options is null
+        ? null
+        : new InvoiceOptionsBody
+        {
+            Profile = string.IsNullOrWhiteSpace(options.Profile) ? null : options.Profile,
             Language = options.Language,
         };
 }

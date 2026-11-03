@@ -87,6 +87,24 @@ public sealed class ZugferdXRechnungClient : IZugferdXRechnungClient, IDisposabl
     }
 
     /// <inheritdoc />
+    public async Task<InvoiceFile> CreateCiiAsync(InvoiceDocument invoice, CiiOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (invoice is null) throw new ArgumentNullException(nameof(invoice));
+        var body = RequestContent.JsonBody(new CreateInvoiceRequestBody { Invoice = invoice, Options = InvoiceOptionsBody.From(options) });
+        var response = await Transport.PostAsync("v1/create/cii", body, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<InvoiceFile> CreateUblAsync(InvoiceDocument invoice, UblOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (invoice is null) throw new ArgumentNullException(nameof(invoice));
+        var body = RequestContent.JsonBody(new CreateInvoiceRequestBody { Invoice = invoice, Options = InvoiceOptionsBody.From(options) });
+        var response = await Transport.PostAsync("v1/create/ubl", body, cancellationToken).ConfigureAwait(false);
+        return await ApiTransport.ReadFileAsync(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<EmailSendResult> EmailZugferdAsync(InvoiceDocument invoice, EmailMessage email, ZugferdOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (invoice is null) throw new ArgumentNullException(nameof(invoice));

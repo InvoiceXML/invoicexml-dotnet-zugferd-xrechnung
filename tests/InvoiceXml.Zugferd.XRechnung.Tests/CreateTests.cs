@@ -95,6 +95,77 @@ public class CreateTests
     }
 
     [Fact]
+    public async Task CreateCii_posts_to_cii_with_language_and_returns_xml()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyFile(TestData.Xml, "application/xml", "invoice-cii.xml");
+
+        var file = await client.CreateCiiAsync(TestData.Invoice(), new CiiOptions { Language = PdfLanguage.De });
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/v1/create/cii", request.Uri.AbsolutePath);
+        using var json = JsonDocument.Parse(request.Body);
+        var options = json.RootElement.GetProperty("options");
+        Assert.Equal("de", options.GetProperty("language").GetString());
+        Assert.False(options.TryGetProperty("syntax", out _));
+        Assert.Equal("RE-2026-001", json.RootElement.GetProperty("invoice").GetProperty("invoiceNumber").GetString());
+        Assert.Equal("application/xml", file.ContentType);
+        Assert.Equal("invoice-cii.xml", file.FileName);
+        Assert.Equal(TestData.Xml, file.ToArray());
+    }
+
+    [Fact]
+    public async Task CreateCii_without_options_sends_no_options_and_requires_an_invoice()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyFile(TestData.Xml, "application/xml", "invoice-cii.xml");
+
+        await client.CreateCiiAsync(TestData.Invoice());
+
+        using var json = JsonDocument.Parse(Assert.Single(handler.Requests).Body);
+        Assert.False(json.RootElement.TryGetProperty("options", out _));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => client.CreateCiiAsync(null!));
+    }
+
+    [Fact]
+    public async Task CreateUbl_posts_to_ubl_with_profile_and_language_and_returns_xml()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyFile(TestData.Xml, "application/xml", "invoice-ubl.xml");
+
+        var file = await client.CreateUblAsync(TestData.Invoice(), new UblOptions { Profile = UblProfiles.XRechnung, Language = PdfLanguage.De });
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/v1/create/ubl", request.Uri.AbsolutePath);
+        using var json = JsonDocument.Parse(request.Body);
+        var options = json.RootElement.GetProperty("options");
+        Assert.Equal("xrechnung", options.GetProperty("profile").GetString());
+        Assert.Equal("de", options.GetProperty("language").GetString());
+        Assert.False(options.TryGetProperty("syntax", out _));
+        Assert.Equal("RE-2026-001", json.RootElement.GetProperty("invoice").GetProperty("invoiceNumber").GetString());
+        Assert.Equal("application/xml", file.ContentType);
+        Assert.Equal("invoice-ubl.xml", file.FileName);
+        Assert.Equal(TestData.Xml, file.ToArray());
+    }
+
+    [Fact]
+    public async Task CreateUbl_without_options_sends_no_options_and_requires_an_invoice()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyFile(TestData.Xml, "application/xml", "invoice-ubl.xml");
+        handler.ReplyFile(TestData.Xml, "application/xml", "invoice-ubl.xml");
+
+        await client.CreateUblAsync(TestData.Invoice(), new UblOptions { Profile = " " });
+        await client.CreateUblAsync(TestData.Invoice());
+
+        using var blank = JsonDocument.Parse(handler.Requests[0].Body);
+        Assert.False(blank.RootElement.GetProperty("options").TryGetProperty("profile", out _));
+        using var none = JsonDocument.Parse(handler.Requests[1].Body);
+        Assert.False(none.RootElement.TryGetProperty("options", out _));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => client.CreateUblAsync(null!));
+    }
+
+    [Fact]
     public async Task Create_rejected_by_validation_throws_with_findings()
     {
         var (client, handler) = TestData.CreateClient();

@@ -99,6 +99,14 @@ var cii = await client.CreateXRechnungAsync(invoice, new XRechnungOptions // or 
 await xml.SaveAsync(xml.FileName ?? "invoice.xml");
 ```
 
+### Create a UBL invoice
+
+The same invoice object also produces a UBL invoice for other networks and countries. `Profile` takes a value from `UblProfiles` and defaults to Peppol BIS Billing 3.0.
+
+```csharp
+var ubl = await client.CreateUblAsync(invoice, new UblOptions { Profile = UblProfiles.PeppolBis3 });
+```
+
 ### Handle a refused invoice
 
 When the data cannot produce a compliant invoice, the create methods throw `InvoiceXmlApiException` with every violated rule and the JSON path of the field to correct.
@@ -130,6 +138,10 @@ var hybrid = await client.CreateZugferdAsync(invoice, new ZugferdOptions { PdfUr
 
 // Or combine a PDF and a CII XML you already have.
 var embedded = await client.EmbedZugferdAsync(File.ReadAllBytes("invoice.pdf"), File.ReadAllBytes("factur-x.xml"));
+
+// Or build the CII XML from your invoice object, then embed it into your own PDF.
+var cii = await client.CreateCiiAsync(invoice);
+var ownLayout = await client.EmbedZugferdAsync(File.ReadAllBytes("invoice.pdf"), cii.ToArray());
 ```
 
 Set `InvoiceDocument.SpecificationId` to a value from `ZugferdProfiles` to create a profile other than EN 16931, for example `ZugferdProfiles.Extended`.
@@ -288,6 +300,8 @@ Any other refused request throws `InvoiceXmlApiException` with the HTTP `StatusC
 |---|---|---|
 | `CreateZugferdAsync` | `POST /v1/create/zugferd` | [reference](https://www.invoicexml.com/docs/api/create/zugferd) |
 | `CreateXRechnungAsync` | `POST /v1/create/xrechnung` | [reference](https://www.invoicexml.com/docs/api/create/xrechnung) |
+| `CreateCiiAsync` | `POST /v1/create/cii` | [reference](https://www.invoicexml.com/docs/api/create/cii) |
+| `CreateUblAsync` | `POST /v1/create/ubl` | [reference](https://www.invoicexml.com/docs/api/create/ubl) |
 | `EmailZugferdAsync` | `POST /v1/create/zugferd/email` | [reference](https://www.invoicexml.com/docs/api/create/zugferd/email) |
 | `EmailXRechnungAsync` | `POST /v1/create/xrechnung/email` | [reference](https://www.invoicexml.com/docs/api/create/xrechnung/email) |
 | `ValidateZugferdAsync` | `POST /v1/validate/zugferd` | [reference](https://www.invoicexml.com/docs/api/validate/zugferd) |

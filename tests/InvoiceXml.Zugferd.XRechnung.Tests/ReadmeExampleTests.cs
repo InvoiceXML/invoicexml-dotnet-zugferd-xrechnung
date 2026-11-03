@@ -96,6 +96,38 @@ public class ReadmeExampleTests
     }
 
     [Fact]
+    public async Task Create_cii_then_embed_example_is_sent_as_documented()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyFile(TestData.Xml, "application/xml", "invoice-cii-RE-2026-001.xml");
+        handler.ReplyFile(TestData.Pdf, "application/pdf", "invoice.pdf");
+        var invoice = TestData.Invoice();
+
+        // Same statements as the README "your own layout" section, on a mocked transport.
+        var cii = await client.CreateCiiAsync(invoice);
+        var ownLayout = await client.EmbedZugferdAsync(TestData.Pdf, cii.ToArray(), fileName: "invoice.pdf");
+
+        Assert.Equal("/v1/create/cii", handler.Requests[0].Uri.AbsolutePath);
+        Assert.Equal("/v1/embed/zugferd", handler.Requests[1].Uri.AbsolutePath);
+        Assert.Equal(TestData.Xml, handler.Requests[1].Part("xml").Body);
+        Assert.Equal("application/pdf", ownLayout.ContentType);
+    }
+
+    [Fact]
+    public async Task Create_ubl_example_is_sent_as_documented()
+    {
+        var (client, handler) = TestData.CreateClient();
+        handler.ReplyFile(TestData.Xml, "application/xml", "invoice-ubl-RE-2026-001.xml");
+        var invoice = TestData.Invoice();
+
+        // Same statement as the README "Create a UBL invoice" section, on a mocked transport.
+        var ubl = await client.CreateUblAsync(invoice, new UblOptions { Profile = UblProfiles.PeppolBis3 });
+
+        Assert.Equal("/v1/create/ubl", Assert.Single(handler.Requests).Uri.AbsolutePath);
+        Assert.Equal("application/xml", ubl.ContentType);
+    }
+
+    [Fact]
     public void Http_client_factory_registration_resolves_the_interface()
     {
         var services = new ServiceCollection();
