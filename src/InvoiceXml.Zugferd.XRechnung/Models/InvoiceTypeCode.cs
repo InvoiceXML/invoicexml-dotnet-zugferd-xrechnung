@@ -6,6 +6,9 @@ namespace InvoiceXml.Zugferd.XRechnung;
 /// </summary>
 public enum InvoiceTypeCode
 {
+    /// <summary>Self-billed credit note (261): credits a self-billed invoice.</summary>
+    SelfBilledCreditNote = 261,
+
     /// <summary>Partial invoice (326).</summary>
     PartialInvoice = 326,
 
@@ -26,6 +29,9 @@ public enum InvoiceTypeCode
 
     /// <summary>Self-billed invoice (389).</summary>
     SelfBilledInvoice = 389,
+
+    /// <summary>Self-billed prepayment invoice (500): a prepayment request the buyer issues.</summary>
+    SelfBilledPrepaymentInvoice = 500,
 
     /// <summary>Partial construction invoice (875).</summary>
     PartialConstructionInvoice = 875,
